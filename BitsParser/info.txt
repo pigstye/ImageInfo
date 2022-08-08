@@ -1,0 +1,4 @@
+Bits DB Parser	
+https://github.com/fireeye/BitsParser
+File that should be here.
+\BitsParser\BitsParser.exe 

@@ -1,0 +1,145 @@
+<#
+	.SYNOPSIS
+		Process IIS logs
+	.DESCRIPTION
+		Process IIS Logs - convert to csv and do a little analysis on them.
+	.Parameter computername
+		Name of the computer host - used to name the files.
+	.PARAMETER basedir
+		Directory to place the logs
+	.Parameter inetpub
+		Inetpub directory to process
+	.Parameter httperr
+		Location of HTTPErr files usually c:\Windows\System32\LogFiles\
+	.EXAMPLE
+		> .\process-logs.ps1 "ComputerHost" 'i:\intepub' 'i:\Windows\System32\LogFiles\'
+	.NOTES
+	Author: Tom Willett 
+	Date: 8/25/2021
+	V1.0
+	Date: 2/11/2022 
+	V1.1 - Updated to normalize date and add computername to iis logfile - updated import-iislogs function
+#>
+	Param([Parameter(Mandatory=$True)][string]$Computername,
+	[Parameter(Mandatory=$True)][string]$basedir,
+	[Parameter(Mandatory=$True)][string]$inetpub,
+	[Parameter(Mandatory=$True)][string]$httperr,
+	[Parameter(Mandatory=$false)][string]$logdir)
+
+<#
+  Configuration Information
+#>
+
+. ($psscriptroot + '.\process-lib.ps1')
+
+function import-iislogs {
+<#
+	.SYNOPSIS
+		Process IIS logs
+	.DESCRIPTION
+		Process IIS Logs - convert to csv and do a little analysis on them.
+	.Parameter computername
+		Name of the computer host - used to name the files.
+	.PARAMETER basedir
+		Directory to place the logs
+	.Parameter inetpub
+		Inetpub directory to process
+	.Parameter httperr
+		Location of HTTPErr files usually c:\Windows\System32\LogFiles\
+	.EXAMPLE
+		> .\process-logs.ps1 "ComputerHost" 'i:\intepub' 'i:\Windows\System32\LogFiles\'
+	.NOTES
+	Author: Tom Willett 
+	Date: 2/11/2022 
+	V1.1 - Added logic to ignore multiple field lines
+#>
+	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$Logfile)
+	$f = get-childitem $logfile
+	$tmp = ((Select-String '#Fields:' $f.fullname).line).Substring(9)
+	if ($tmp.length -gt 10) {$tmp > tmp.csv} else {$tmp[0] > tmp.csv}
+	(Select-String -notmatch '^#' $f.fullname).line >> tmp.csv
+	import-csv tmp.csv -delim ' ' | export-csv -notype ($f.basename + '.csv')
+	remove-item tmp.csv
+}
+
+# And it begins
+#########
+if ($debug) {
+	$ErrorActionPreference = "Inquire"
+	write-log "Process-iislogs.ps1" "green"
+	write-log "Parameters:"
+	write-log "Computername = $Computername"
+	write-log "Basedir = $basedir"
+	write-log "Inetpub = $inetpub"
+	write-log "HTTPErr = $httperr"
+	write-log "logdir = $logdir"
+} else {
+	$ErrorActionPreference = "SilentlyContinue"
+}
+
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+	Write-host "Must be run with Administrator Permissions" -fore red
+	exit
+}
+
+#Resize Window
+$w = $Host.UI.RawUI.windowsize
+$w.height = 20
+$w.width = 100
+$Host.UI.RawUI.windowsize = $w
+$host.ui.RawUI.WindowTitle="Processing IIS Logs for $computername"
+
+#Set Up Directories
+$basedir = get-path $basedir 
+$inetpub = get-path $inetpub
+$httperr = get-path $httperr
+
+Push-Location $basedir
+
+(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Processing IIS Logs' | save-messages
+
+
+if (test-path ($inetpub + 'logs' )) {
+	write-log "Copying IIS Logs" "yellow"
+	if (test-path $logdir) {
+		$iislogs = get-path $logdir
+	} else {
+		$iislogs = get-path 'iislogs'
+	}
+	copy-item -Recurse ($inetpub + 'logs\*') $iislogs
+	copy-item -Recurse ($httperr + 'httperr\*') $iislogs
+#######
+	write-log "Processing IIS Logs" "yellow"
+	if (test-path 'iislogs\LogFiles') {
+		push-location iislogs\LogFiles
+	} else {
+		push-location iislogs
+	}
+	$iiscsv = get-path 'csv'
+	set-location $iiscsv
+	write-log "Converting to CSV"
+	get-childitem ..\*.log -recurse | foreach-object{Import-IISLogs $_.fullname}
+	write-log "Gathering Logs together"
+	get-childitem * | foreach-object{$s = import-csv $_.fullname
+				$s | export-csv -notype -append ('..\tmp.csv')
+			}
+	set-location ..
+
+	$s = import-csv tmp.csv
+	$s | foreach-object{$_.date = $_.date + ' ' + $_.time}
+	$fields = get-content tmp.csv -head 1
+	$fields = $fields -replace '"time",',''
+	$fields = $fields -replace '"',''
+	$s | select-object ($fields -split ',') | export-csv -notype ($computername + '~IISLogs.csv')
+	remove-item temp.csv
+	write-log "Analyzing IIS Logs"
+	$s |foreach-object{$_.'s-ip' >> s-ip.txt;$_.'c-ip' >> c-ip.txt}
+	get-content s-ip.txt | Group-Object | select-object count,name | Sort-Object count -desc > s-ip-histo.txt
+	get-content c-ip.txt | Group-Object | select-object count,name | Sort-Object count -desc > c-ip-histo.txt
+	pop-location
+	start-sleep -s 5
+}
+
+(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Finished processing IIS Logs' | save-messages
+pop-location

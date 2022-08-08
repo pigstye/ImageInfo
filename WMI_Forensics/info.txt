@@ -1,0 +1,6 @@
+Python Scripts to find Persistence in WMI.
+https://github.com/davidpany/WMI_Forensics
+These files should be here
+\WMI_Forensics\CCM_RUA_Finder.exe
+\WMI_Forensics\PyWMIPersistenceFinder.exe
+

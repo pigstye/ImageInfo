@@ -1,0 +1,6 @@
+Folder: EricZimmerman
+Eric Zimmerman Tools
+https://ericzimmerman.github.io/#!index.md
+The following executables should be here
+\EricZimmerman\registryexplorer\recmd.exe
+	Custom batch cmd files are here also

@@ -1,0 +1,172 @@
+<#
+	.Synopsis
+		Collects Information about artifacts collected with Volcano
+	.Description
+		Collects information from the registry and file system and logs from 
+		artifacts collected by volcano. The information is placed back in the folder
+		that contains the collected artifacts. Log files are automatically processed
+		and added to logs.csv. After Processing the logs they are searched for common
+		vulnerabilities.
+		The following data is collected in CSV files:
+			Application Compatability Cache
+			AmCache
+			Jump Lists
+			Recent File Cache
+			ESE Database Dumper (srum)
+			ShellBags
+			MFT
+			USNJrnl
+	.Parameter Dir
+		The directory with the volcano data
+	.Notes
+		Tom Willett
+		8/11/2021
+		V1.0
+#>
+
+Param([String][Parameter(Mandatory=$true)]$Dir)
+
+#lab setup
+$ScriptPath = $MyInvocation.MyCommand.Path
+$ScriptDir = split-path -parent $ScriptPath
+
+<#
+  Configuration Information
+#>
+#basic configuration 
+. ($psscriptroot + '.\process-lib.ps1')
+
+get-childitem *destinations.csv | foreach-object{
+	Normalize-Date $_.name 'SourceCreated' 'SourceCreated,SourceFile,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes'
+}
+
+function get-computername {
+	<#
+	.Synopsis
+		Gets computer name from api json
+	.Description
+		Gets computer name from api getcomputername.jsonl
+	.NOTES
+		Author: Tom Willett
+		Date: 10/7/2021
+	#>
+	$computername = (get-content ($workingdir + 'api\windows\getComputerName.jsonl') | convertfrom-json).result
+	write-host $computername
+	$computername
+}
+
+function write-log {
+	param([Parameter(Mandatory=$True)][string]$msg,[Parameter(Mandatory=$false)][string]$fore="white")
+	$msglog = $basedir + '\ProgressLog.txt'
+	$dte = get-date
+	write-host $msg -fore $fore
+	$dte.tostring("M-d-yyyy h:m") + ' - ' + $msg | add-content $msglog
+}
+
+
+#api conversion functions
+function convertjson2-csv {
+	Param([Parameter(Mandatory=$True)][String]$path)
+	$path
+	$tmp = get-content ('.\Windows\' + $path + '.jsonl') | convertfrom-json
+	$tmp | export-csv -notype ($path + '.csv')
+}
+
+function convertjson1-csv {
+	Param([Parameter(Mandatory=$True)][String]$path)
+	$path
+	$tmp = get-content ('.\Windows\' + $path + '.jsonl') | convertfrom-json
+	$tmp.result | export-csv -notype ($path + '.csv')
+}
+
+function convertjson0-txt {
+	Param([Parameter(Mandatory=$True)][String]$path)
+	$path
+	(get-content ('.\Windows\' + $path + '.jsonl') | convertfrom-json).result | add-content ($path + '.txt')
+}
+
+#api functions
+$api0 = 'GetLogicalDriveStrings','GetWindowsDirectory','GetSystemDirectory','GetSystemWindowsDirectory','QueryDosDevice','GetComputerName'
+$api1 = 'RtlGetVersion','CreateToolhelp32Snapshot_TH32CS_SNAPPROCESS','DnsGetCacheDataTable','GetAdaptersAddresses','GetExtendedTcpTable','GetExtendedUdpTable','GetIpForwardTable','GetIpNetTable','GlobalMemoryStatusEx','MmGetPhysicalMemoryRanges','GetNetworkParams','GetTcp6Table','GetTimeZoneInformation','GetUdp6Table','GetUdpTable','GetVolumeInformation','GetTcpTable'
+$api2 = 'GetDriveType','GetSystemDEPPolicy','GetTickCount64','NtQuerySystemInformation'
+
+# And it begins
+
+$ErrorActionPreference = "SilentlyContinue"
+#########
+if (test-path $dir) {
+	set-location $dir
+	$workingdir = (get-location).path + '\'
+	$computername = get-computername
+	set-location ..
+	rename-item $workingdir $computername
+	set-location $computername
+	$workingdir = (get-location).path + '\'
+} else {
+	"Invalid path $dir"
+	exit
+}
+
+$basedir = $workingdir + '\files\'
+
+write-log "Processing Volcano at $workingdir"
+
+push-location API
+foreach($api in $api0) {
+	convertjson0-txt $api
+}
+foreach($api in $api1) {
+	convertjson1-csv $api
+}
+foreach($api in $api2) {
+	convertjson2-csv $api
+}
+copy-item CreateToolhelp32Snapshot_TH32CS_SNAPPROCESS.csv ('..\files\' + $computername + '-ProcessList.csv')
+copy-item GetExtendedTcpTable.csv ('..\files\' + $computername + '-networkconnections.csv')
+pop-location
+
+push-location files
+
+mkdir 'userinfo' >> $null
+$userinfo = (get-item 'userinfo').fullname
+if (-not $userinfo.endswith('\')){$userinfo += '\'}
+
+$host.ui.RawUI.WindowTitle="Processing Volcano output for $computername"
+
+$logdir = $basedir + 'c\windows\system32\winevt\logs\'
+$script = $scriptdir + '\process-logs.ps1'
+$arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
+start-process "$pshome\powershell.exe" -argumentlist $arg
+write-log "Starting Log Analysis"
+
+$script = $scriptdir + '\process-registries.ps1'
+$config = $basedir + 'c\windows\System32\config\'
+$userdir = $basedir + 'c\users'
+& $script $computername $basedir $config $userdir $userinfo
+
+$windir = $basdir + 'c\windows\'
+$script = $scriptdir + '\process-systeminfo.ps1'
+& $script $computername $basedir $windir $userdir
+
+$mftfile = $workingdir + 'files\c\$MFT'
+if (test-path $mftfile) {
+	write-log "Parsing MFT"
+	$outfile = $computername + '-mft.csv'
+	& $mft -f $mftfile --csv '.' --csvf $outfile  > logfile.txt
+}
+
+$script = $scriptdir + '\process-userinfo.ps1'
+& $script $computername $basedir $userdir $userinfo
+
+$tmp = get-childitem ((get-date).year.tostring() + "*")
+move-item (".\" + $tmp.Name + "\*") .
+remove-item -recurse (".\" + $tmp.Name)
+
+push-location userinfo
+$tmp = get-childitem ((get-date).year.tostring() + "*")
+move-item (".\" + $tmp.Name + "\*") .
+remove-item -recurse (".\" + $tmp.Name)
+pop-location
+
+set-location ..\..
+write-log "Finished processing $computername except for logs" -fore yellow
