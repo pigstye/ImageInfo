@@ -217,7 +217,20 @@ write-log 'Getting Scheduled Tasks'
 $outfile = $computername + '~ScheduledTasks.csv'
 $taskdir = $windir + 'system32\tasks'
 get-childitem $taskdir -recurse -file | foreach-object{get-task $_.fullname | export-csv -notype -append $outfile}
-$s
+
+## Looking for possible persistence
+$st = import-csv $outfile 
+if ($st | Where-Object {$_.Actions -like '*.ps1*'}) {
+	write-persistence "Check for Scheduled Task running a PowerShell script"
+}
+if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
+	write-persistence "Check for Scheduled Task running a Visual Basic"
+}
+$stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+if ($stnum -gt 0) {
+	write-persistence "$stnum New Scheduled tasks in last 30 days."
+}
+
 write-log 'Getting Prefetch'
 $outfile = $computername + '~Prefetch.csv'
 & $pecmd -d ($windir + 'prefetch') --csv '.' --csvf $outfile | save-messages
@@ -270,9 +283,14 @@ if (test-path ($windir + 'system32\wbem\repository\fs\objects.data')) {
 	& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi-fs.csv') | save-messages 2> $null
 	& $wmi2 ($windir + 'system32\wbem\repository\objects.data') >> ($computername + '~wmi.txt')
 }
+#Convert tab delimited to comma delimited
 import-csv ($computername + '~wmi.csv') -delim "`t" | export-csv -notype tmp.csv
 remove-item ($computername + '~wmi.csv')
 move-item tmp.csv ($computername + '~wmi.csv')
+## Check for possible persistence
+if (Get-ChildItem ($Computername + '~wmi.txt') | Where-Object length -gt 1670) {
+	write-persistence "Check $Computername~wmi.txt"
+}
 
 If (Test-path ($drive + '\ProgramData\Microsoft\Network\Downloader\')) {
 	write-log 'Getting BITS data'

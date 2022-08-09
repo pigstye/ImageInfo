@@ -219,4 +219,3 @@ Function Test-FileLocked {
     }
 }
 
-$imagedate = get-content ($basedir + 'ImageDate.txt')
