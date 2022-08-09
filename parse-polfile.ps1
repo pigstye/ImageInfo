@@ -341,7 +341,7 @@ Function Read-RegistryPolicies
         'Users'        { $Hive = [Microsoft.Win32.Registry]::Users } 
     }
 
-    foreach ($entry in $Entries)
+    foreach($entry in $Entries)
     {
         #if (Test-Path -Path $entry)
         if (IsRegistryKey -Path $entry -Hive $Hive)

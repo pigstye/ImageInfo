@@ -65,7 +65,7 @@ function import-iislogs {
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "Inquire"
+	$ErrorActionPreference = "continue"
 	write-log "Process-iislogs.ps1" "green"
 	write-log "Parameters:"
 	write-log "Computername = $Computername"
@@ -82,6 +82,8 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 	Write-host "Must be run with Administrator Permissions" -fore red
 	exit
 }
+
+$imagedate = get-content ($basedir + 'ImageDate.txt')
 
 #Resize Window
 $w = $Host.UI.RawUI.windowsize

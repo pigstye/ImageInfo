@@ -339,7 +339,7 @@ write-log "Processing Event Logs for $computername"
 $basedir = get-path $basedir
 $logfiles = get-path $logfiles
 $log = $basedir + 'messages.txt'
-
+$imagedate = get-content ($basedir + 'ImageDate.txt')
 
 write-log "Converting Event Logs to CSV" -fore "green"
 

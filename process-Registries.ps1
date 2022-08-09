@@ -765,6 +765,8 @@ $systemdir = get-path $systemdir
 
 $userdir = get-path $userdir
 
+$imagedate = get-content ($basedir + 'ImageDate.txt')
+
 write-log "Processing System Registries for $computername" -fore yellow
 
 get-regbatch -title 'SystemInfo' -computer $computername -batch 'systeminfo.reb' -path $systemdir -out '~SystemInfo.csv'

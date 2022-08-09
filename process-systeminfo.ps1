@@ -167,7 +167,7 @@ function get-task {
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "Inquire"
+	$ErrorActionPreference = "continue"
 	write-host "Process-SystemInfo.ps1" -for green
 	write-host "Parameters:"
 	write-host "Computername = $Computername"
@@ -181,6 +181,7 @@ if ($debug) {
 $basedir = get-path $basedir
 $windir = get-path $windir
 $drive = (get-item $windir).parent.name[0]
+$imagedate = get-content ($basedir + 'ImageDate.txt')
 
 push-location $basedir
 
@@ -216,7 +217,7 @@ write-log 'Getting Scheduled Tasks'
 $outfile = $computername + '~ScheduledTasks.csv'
 $taskdir = $windir + 'system32\tasks'
 get-childitem $taskdir -recurse -file | foreach-object{get-task $_.fullname | export-csv -notype -append $outfile}
-
+$s
 write-log 'Getting Prefetch'
 $outfile = $computername + '~Prefetch.csv'
 & $pecmd -d ($windir + 'prefetch') --csv '.' --csvf $outfile | save-messages

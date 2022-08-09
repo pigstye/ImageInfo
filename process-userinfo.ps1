@@ -34,7 +34,7 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "Inquire"
+	$ErrorActionPreference = "continue"
 	write-log "process-userinfo.ps1" "green"
 	write-log "Computername = $Computername"
 	write-log "Basedir = $basedir"
@@ -45,6 +45,7 @@ if ($debug) {
 }
 
 $basedir = get-path $basedir
+$imagedate = get-content ($basedir + 'ImageDate.txt')
 
 push-location $basedir
 

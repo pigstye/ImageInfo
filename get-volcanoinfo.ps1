@@ -135,6 +135,11 @@ $host.ui.RawUI.WindowTitle="Processing Volcano output for $computername"
 
 $logdir = $basedir + 'c\windows\system32\winevt\logs\'
 $script = $scriptdir + '\process-logs.ps1'
+
+$s = (get-childitem $logdir).lastwritetime
+($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
+$imagedate = ($s | sort-object)[$s.length-1]
+
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
 start-process "$pshome\powershell.exe" -argumentlist $arg
 write-log "Starting Log Analysis"
