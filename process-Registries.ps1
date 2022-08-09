@@ -66,6 +66,7 @@ function get-regbatch {
 	write-log "Getting $Title"
 	$batchCmd = $recmddir + $batch
 	$outfile = $computer + $out
+	Write-Debug "Executing Command: $recmd -d $path --bn $batchCmd --csv . --csvf $outfile"
 	& $recmd -d $path --bn $batchCmd --csv '.' --csvf $outfile | save-messages -ErrorAction SilentlyContinue
 }
 
@@ -706,7 +707,7 @@ function get-auditinfo {
 	if (($audit | where-object {$_.keypath -like "*Microsoft\Windows\CurrentVersion\Policies\System\Audit\*" -and $_.valuename -eq 'ProcessCreationIncludeCmdLine_Enabled'}).ValueData -eq 1) {
 		"`tCommand line data included in process creation events`tenabled" | out-file $outfile -append
 	} else {
-		"`tCommand line data included in process creation events`tenabled" | out-file $outfile -append
+		"`tCommand line data included in process creation events`tdisabled" | out-file $outfile -append
 	}
 }
 
@@ -744,7 +745,7 @@ function Format-HumanReadable([Parameter(Mandatory = $True)][int]$size) {
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "Inquire"
+	$ErrorActionPreference = "Continue"
 	write-log "process-Registries.ps1" -fore "green"
 	write-log "Computername = $Computername"
 	write-log "Basedir = $basedir"
@@ -768,22 +769,25 @@ $userdir = get-path $userdir
 $imagedate = get-content ($basedir + 'ImageDate.txt')
 
 write-log "Processing System Registries for $computername" -fore yellow
-
+Write-Debug "Processing SystemInfo with systeminfo.reb"
 get-regbatch -title 'SystemInfo' -computer $computername -batch 'systeminfo.reb' -path $systemdir -out '~SystemInfo.csv'
-
+Write-Debug "Processing AuditInfo with audit.reb"
 get-regbatch -title 'AuditInfo' -computer $computername -batch 'audit.reb' -path $systemdir -out '~Audit.csv'
-
+Write-Debug "Processing Services with services.reb"
 get-regbatch -title 'Services' -computer $computername -batch 'services.reb' -path $systemdir -out '~services.csv'
-
+Write-Debug "Processing unquoted service paths"
 get-unquotedservicepaths(($computername + '~services.csv')) | export-csv -notype ($computername + '~unquotedservicepaths.csv')
 
+Write-Debug "Processing 'Installed User Software' with installedsoftware.reb"
 get-regbatch -title 'Installed User Software' -computer $computername -batch 'installedsoftware.reb' -path $userdir -out '~usersoftware.csv'
 
+Write-Debug "Processing 'Installed System Software' with installedsoftware.reb"
 get-regbatch -title 'Installed System Software' -computer $computername -batch 'installedsoftware.reb' -path $systemdir -out '~systemsoftware.csv'
 
 mkdir Shellbags  >> $null
 set-location ShellBags
 	write-log "Getting Shellbags"
+	Write-Debug "Executing command: & $sb -d ($userDir) --csv ."
 	& $sb -d ($userDir) --csv . | save-messages -ErrorAction SilentlyContinue
 	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
 					move-item $_.name $csvfile
@@ -799,6 +803,8 @@ write-log "Processing  User Registries for $computername" -fore yellow
 
 write-log "Getting User Info from Registries"
 #get-regbatch -title 'UserSamInfo' -computer $computername -batch 'sam.reb' -path $systemdir -out '~UserSam.csv'
+
+Write-Debug "Processing UserActivity with userActivity.reb"
 get-regbatch -title 'UserActivity' -computer $computername -batch 'userActivity.reb' -path $userDir -out '~UserActivity.csv'
 
 set-location ..

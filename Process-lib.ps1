@@ -70,8 +70,8 @@ function write-log {
 	$msglog = $basedir + '\ProgressLog.txt'
 	$dte = get-date
 	write-host $msg -fore $fore
-	$dte.tostring("M-d-yyyy h:m") + ' - ' + $msg | add-content $msglog
-	write-debug ($dte.tostring("M-d-yyyy h:m") + ' - ' + $msg)
+	$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content $msglog
+	write-debug ($dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg)
 }
 
 
@@ -128,7 +128,10 @@ function save-messages {
 function write-debug {
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
 	if ($debug) {
-		write-host "$msg"
+		$dte = Get-Date
+		$msg = $dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg
+		write-host -ForegroundColor DarkYellow $msg
+		$msg >> ($basedir + 'debug.txt')
 	}
 }
 

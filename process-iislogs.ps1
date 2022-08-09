@@ -65,7 +65,7 @@ function import-iislogs {
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "continue"
+	$ErrorActionPreference = "Continue"
 	write-log "Process-iislogs.ps1" "green"
 	write-log "Parameters:"
 	write-log "Computername = $Computername"
@@ -82,8 +82,6 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 	Write-host "Must be run with Administrator Permissions" -fore red
 	exit
 }
-
-$imagedate = get-content ($basedir + 'ImageDate.txt')
 
 #Resize Window
 $w = $Host.UI.RawUI.windowsize
@@ -119,6 +117,7 @@ if (test-path ($inetpub + 'logs' )) {
 		push-location iislogs
 	}
 	$iiscsv = get-path 'csv'
+	write-debug "iiscsv = $iiscsv"
 	set-location $iiscsv
 	write-log "Converting to CSV"
 	get-childitem ..\*.log -recurse | foreach-object{Import-IISLogs $_.fullname}

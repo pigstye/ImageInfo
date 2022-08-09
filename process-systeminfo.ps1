@@ -167,7 +167,7 @@ function get-task {
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "continue"
+	$ErrorActionPreference = "Continue"
 	write-host "Process-SystemInfo.ps1" -for green
 	write-host "Parameters:"
 	write-host "Computername = $Computername"
@@ -189,28 +189,34 @@ write-log 'Getting Systeminfo'
 
 write-log "Getting Application Compatability Cache (ShimCache)"
 $outfile = $computername + '~AppCompatCache.csv'
+Write-Debug "Executing command: $appCompCmd -f $windir'System32\config\SYSTEM' --csv . --csvf $outfile"
 & $appCompCmd -f ($windir + 'System32\config\SYSTEM') --csv . --csvf $outfile | save-messages
 
 write-log "Getting AmCache"
 $outfile = $computername + '~AmCache.csv'
+Write-Debug "Executing command: $appCacheCmd -f $windir'appcompat\programs\Amcache.hve' --csv . --csvf $outfile"
 & $appCacheCmd -f ($windir + 'appcompat\programs\Amcache.hve') --csv . --csvf $outfile | save-messages
 
 write-log "Getting Recent File Cache"
 $recentFC = $windir + 'AppCompat\Programs\RecentFileCache.bcf'
 $outfile = $computername + '~RecentFileCache.csv'
+Write-Debug "Executing command: $rfc -f $recentFC --csv . --csvf $outfile"
 & $rfc -f $recentFC --csv "." --csvf $outfile | save-messages
 
 write-log "Getting Recycle Bin"
 $RB = $drive + ':\$Recycle.Bin'
 $outfile = $computername + '~RecycleBin.csv'
+Write-Debug "Executing command: $RBCMD -d $RB --csv . --csvf $outfile"
 & $RBCMD -d $RB --csv "." --csvf $outfile | save-messages
 
 write-log "Getting Browser History"
 $outfile = $computername + '~browserhistory.csv'
+Write-Debug "Executing command: $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)"
 & $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)  | save-messages
 
 write-log "Getting Application Crash Info"
 $outfile = $computername + '~AppCrash.txt'
+Write-Debug "Executing command: $appcrash /profilesfolder $userdir /stext $outfile"
 & $appcrash /profilesfolder $userdir /stext $outfile
 
 write-log 'Getting Scheduled Tasks'
@@ -233,12 +239,14 @@ if ($stnum -gt 0) {
 
 write-log 'Getting Prefetch'
 $outfile = $computername + '~Prefetch.csv'
+Write-Debug "Executing command: $pecmd -d $windir'prefetch' --csv . --csvf $outfile"
 & $pecmd -d ($windir + 'prefetch') --csv '.' --csvf $outfile | save-messages
 
 if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	write-log 'Getting SRUM data'
 	mkdir Srum  >> $null
 	set-location srum
+	Write-Debug "Executing command: $srum -p srudb_plugin $windir'system32\sru\srudb.dat'"
 	& $srum -p srudb_plugin ($windir + 'system32\sru\srudb.dat') | save-messages
 	
 	Normalize-Date 'Application Resource Usage.csv' 'TimeStamp'
@@ -277,10 +285,14 @@ get-childitem ($windir + 'system32\grouppolicy\*.pol') -recurse | foreach-object
 get-childitem ($windir + 'system32\grouppolicy\*.xml') -recurse | foreach-object{get-content $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 
 write-log 'Getting WMI data'
+Write-Debug "Executing command: $wmi -i $windir'system32\wbem\repository\objects.data' -o $computername'~wmi.csv')"
 & $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi.csv') | save-messages 2> $null
+Write-Debug "Executing command: $wmi2 $windir'system32\wbem\repository\objects.data' > $computername'~wmi.txt'"
 & $wmi2 ($windir + 'system32\wbem\repository\objects.data') > ($computername + '~wmi.txt')
 if (test-path ($windir + 'system32\wbem\repository\fs\objects.data')) {
+	Write-Debug "Executing command: $wmi -i $windir'system32\wbem\repository\objects.data' -o $computername'~wmi-fs.csv'"
 	& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi-fs.csv') | save-messages 2> $null
+	Write-Debug "Executing command: $wmi2 $windir'system32\wbem\repository\objects.data' >> $computername'~wmi.txt'"
 	& $wmi2 ($windir + 'system32\wbem\repository\objects.data') >> ($computername + '~wmi.txt')
 }
 #Convert tab delimited to comma delimited
@@ -294,6 +306,7 @@ if (Get-ChildItem ($Computername + '~wmi.txt') | Where-Object length -gt 1670) {
 
 If (Test-path ($drive + '\ProgramData\Microsoft\Network\Downloader\')) {
 	write-log 'Getting BITS data'
+	Write-Debug "Executing command: $bits -i $drive'\ProgramData\Microsoft\Network\Downloader\' --carveall > $computername'~bits.json'"
 	& $bits -i ($drive + '\ProgramData\Microsoft\Network\Downloader\') --carveall > ($computername + '~bits.json')
 }
 
@@ -302,10 +315,12 @@ If (Test-path ($windir + 'System32\LogFiles\Sum\')) {
 	mkdir SumDatabase >> $null
 	set-location SumDatabase
 	copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
+	Write-Debug "Executing command: $srum .\SystemIdentity.mdb"
 	& $srum .\SystemIdentity.mdb | save-messages
 	mkdir Current >> $null
 	move-item current.mdb Current
 	set-location Current
+	Write-Debug "Executing command: $srum current.mdb"
 	& $srum current.mdb | save-messages
 	set-location ..
 	$l = import-csv .\CHAINED_DATABASES.csv

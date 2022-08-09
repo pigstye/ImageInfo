@@ -97,7 +97,7 @@ function check-logRecordID {
 #>
 
 	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$LogFile)
-
+	write-debug "Checking $logfile for gaps in record ID"
 	begin {
 		$BoundaryEvents = @()
 	}
@@ -155,12 +155,13 @@ function get-logsearches {
 	Param([Parameter(Mandatory=$True)][string]$Computername,
 	[Parameter(Mandatory=$True)][string]$logsearches,
 	[Parameter(Mandatory=$True)][string]$csvdir)
-
+	
 	push-location $LogSearches
 
 	write-log "Processing Security Log" "yellow"
 	write-log "Gathering Events" "cyan"
-	$t = import-csv ($csvdir + ($computername + '~security.csv')) 
+	write-debug "Searching log: $csvdir$computername~security.csv"
+	$t = import-csv ($csvdir + ($computername + '~security.csv'))
 	$t | where-object {$_.eventid -in (4624,4625,4776,4672,4634)} | export-csv -notype ($computername + '~logonEvents.csv')
 	$t | where-object {$_.eventid -eq 4648} | export-csv -notype ($computername + '~ExplicitLogon.csv')
 	$t | where-object {$_.eventid -eq 4798 -or $_.eventid -eq 4799} | export-csv -notype ($computername + '~groupenumeration.csv')
@@ -172,6 +173,7 @@ function get-logsearches {
 	$t | where-object {$_.eventid -eq 4688 -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*'  -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or 
 	$_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')} | export-csv -notype ($computername + '~lolbins.csv')
 	$report = @()
+	write-debug "Searching log: $computername~lolbins.csv"
 	$l = import-csv ($computername + '~lolbins.csv')
 	$l |foreach-object{$tmp = "" | select-object DateTime,Process,CreatorProcess,CmdLine;$tmp.datetime = $_.datetime; $_.event | Select-String 'New Process Name: (.+?) Token Elevation Type: .+? Mandatory Label:\s+?\S+?\s+?Creator Process ID: .+?  Creator Process Name: (.+?)  Process Command Line:(.+?) ' | foreach-object{$tmp.process=$_.matches.groups.captures[1].value;$tmp.Creatorprocess=$_.matches.groups.captures[2].value;$tmp.cmdline=$_.matches.groups.captures[3].value;$report+=$tmp}}
 	$report | export-csv -notype ($computername + '~lolbins-sum.csv')
@@ -193,6 +195,7 @@ function get-logsearches {
 	write-log "Analyzing Security Logs" "cyan"
 	$report = @()
 	write-log "Analyzing Logon Events" "cyan"
+	write-debug "Searching log: $computername ~logonEvents.csv"
 	$t = import-csv ($computername + '~logonEvents.csv')
 	[System.GC]::Collect()
 	$t | where-object {$_.eventid -eq 4624} | foreach-object{$tmp=""|select-object datetime,user,LogonType,host,ip;$tmp.datetime=$_.datetime;$_.event | Select-String 'Logon Type: {1,4}(\d{1,2}).+?Account Name: (.+?) .+?Workstation Name: (.+?) Source Network Address: (-|::1|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' | foreach-object{$tmp.user=$_.matches.groups.captures[2].value;$tmp.logontype=$_.matches.groups.captures[1].value;$tmp.host=$_.matches.groups.captures[3].value;$tmp.ip=$_.matches.groups.captures[4].value};$report+=$tmp}
@@ -211,8 +214,10 @@ function get-logsearches {
 	$t | where-object {$_.eventid -eq 4624} | Select-String 'Account Name: (.+?) ' | foreach-object{$_.matches.groups.captures[1].value} | Group-Object | select-object count,name | Sort-Object count -desc | Format-Table -wrap > logonusers-histo.txt
 	$t | where-object {$_.eventid -eq 4624} | Select-String 'Source Network Address: (-|::1|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' | foreach-object{$_.matches.groups.captures[1].value} | Group-Object | select-object count,name | Sort-Object count -desc | Format-Table -wrap > LogonSourceIP-histo.txt
 	write-log "Processing Terminal Services" "cyan"
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-TerminalServices-LocalSessionManager%4Operational.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-TerminalServices-LocalSessionManager%4Operational.csv')) | where-object {$_.eventid -in (21,23,24,25)} | export-csv -notype ($computername + '~TerminalServicesLogins.csv')
 	$report = @()
+	write-debug "Searching log: $computername~TerminalServicesLogins.csv"
 	$t = import-csv ($computername + '~TerminalServicesLogins.csv')
 	[System.GC]::Collect()
 	$t | where-object {$_.eventid -in (21,24,25)} | foreach-object{$tmp=""|select-object DateTime,User,IP,EventID,Session;$tmp.datetime=$_.datetime;$tmp.Eventid=$_.EventID;$_.event | Select-String 'User: (.+?) Session ID:\s{1,2}(\d{1,3})\s{1,3}Source Network Address: (.{2,15})' | foreach-object{$tmp.user=$_.matches.groups.captures[1].value;$tmp.Session=$_.matches.groups.captures[2].value;$tmp.IP=$_.matches.groups.captures[3].value};$report+=$tmp}
@@ -221,6 +226,7 @@ function get-logsearches {
 	$report | foreach-object{if ($_.eventid -eq 21){$_.eventID = '21 Logon'};if ($_.eventid -eq 24){$_.eventID = '24 Disconnect'};if ($_.eventID -eq 25){$_.eventid = '25 Reconnect'};if ($_.eventid -eq 23){$_.eventid = '23 Logoff'};$rpt += $_}
 	$rpt | export-csv -notype ($computername + '~TermServLogins-summary.csv')
 	write-log "Processing System Log" "cyan"
+	write-debug "Searching log: $csvdir$computername~system.csv"
 	$t = import-csv ($csvdir + ($computername + '~system.csv'))
 	[System.GC]::Collect()
 	write-log "Analyzing System Log" "cyan"
@@ -231,10 +237,12 @@ function get-logsearches {
 	"System Log" | add-content -enc utf8 LogTampering.txt
 	$t | foreach-object{$dte2 = get-date($_.datetime);if (($dte - $dte2).totalhours -gt 6) {$dte2.tostring() + ' - ' + $dte.tostring()};$dte = $dte2} | add-content LogTampering.txt
 	write-log "Processing Application Log" "cyan"
+	write-debug "Searching log: $csvdir$computername~application.csv"
 	$a = import-csv ($csvdir + ($computername + '~application.csv'))
 	$a | where-object {($_.eventid -in (325,326,327,216)) -and ($_.LogSourceType -eq 'ESENT') -and $_.event -like '*ntds*'} | export-csv -notype ntds.dit-dumping.csv
 	$a | where-object {$_.eventid -eq 1000 -and $_.ShortEvent -eq 'Application Crashing Events'} | export-csv -notype ($computername + '~applicationcrash.csv')
-	$t = import-csv ($computername + '~applicationcrash.csv ')
+	write-debug "Searching log: $computername~applicationcrash.csv"
+	$t = import-csv ($computername + '~applicationcrash.csv')
 	$t | Select-String 'Faulting application name: (.+?), ' | foreach-object{$_.matches.groups.captures[1].value} | Group-Object | select-object count,name | Sort-Object count -desc > appcrash-histo.txt
 	$report = @()
 	$t | foreach-object{$temp = "" | select-object DateTime,Application;$temp.DateTime = $_.DateTIme;$_.event | Select-String 'Faulting application name: (.+?), ' | foreach-object{$temp.application = $_.matches.groups.captures[1].value;$report += $temp}}
@@ -243,8 +251,10 @@ function get-logsearches {
 	$dte = get-date($a[0].DateTime)
 	$a | foreach-object{$dte2 = get-date($_.datetime);if (($dte - $dte2).totalhours -gt 6) {$dte2.tostring() + ' - ' + $dte.tostring()};$dte = $dte2} | add-content LogTampering.txt
 	write-log "Processing PowerShell Logs" "cyan"
+	write-debug "Searching log: $csvdir$computername~Windows PowerShell.csv"
 	$t = import-csv ($csvdir + ($computername + '~Windows PowerShell.csv'))
 	[System.GC]::Collect()
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-PowerShell%4Operational.csv"
 	$t += import-csv ($csvdir + ($computername + '~Microsoft-Windows-PowerShell%4Operational.csv'))
 	#stupid tricks to get past Windows Defender
 	$t | where-object {$_.event -like "*Net.WebClient*" -or $_.event -like "*DownloadFile*"	-or $_.event -like "*DownloadString*"	-or $_.event -like "*Invoke-WebRequest*"	-or $_.event -like "*Inv" + "oke-Shel" + "lcode*"	-or $_.event -like "*http:"} | export-csv -notype ($computername + '~powershellDownloads.csv')
@@ -253,14 +263,22 @@ function get-logsearches {
 	$t | where-object {($_.eventid -ne 600) -and ($_.event -like '*IO.Str" + "eamReader*' -or $_.event -like '*[ref" + "lection.as" + "sembly]*' -or $_.event -like '*Convert]::FromBase64String*')} | export-csv -notype -append ($computername + '~PowerShell.csv')
 	$t | where-object {$_.event -like '*var_code*' -or $_.event -like '*DoIt*' -or $_.event -like '*IEX \$DoIt*' -or $_.event -like '*IO.StreamReader*' -or $_.event -like '*IEX \(New" + "-Object IO.Str" + "eamReader*'} | export-csv -notype ($computername + '~CobaltStrike.csv')
 	write-log "Processing Run/Runonce, Applocker, Office Alerts, Winrm, Scheduled Tasks" "cyan"
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-Shell-Core%4Operational.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-Shell-Core%4Operational.csv')) | where-object {$_.eventid -in (9707,9708)} | export-csv -notype ($computername + '~run-runonce.csv')
+	write-debug "Searching log: $csvdir$computername~OAlerts.csv.csv"
 	import-csv ($csvdir + ($computername + '~OAlerts.csv')) | where-object {$_.eventid -eq 300} | export-csv -notype ($computername + '~office-alerts.csv')
 	write-log "Getting Applocker and Software Restriction"
+	write-debug "Searching log: $csvdir$computername~~Microsoft-Windows-AppLocker%4EXE and DLL.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-AppLocker%4EXE and DLL.csv')) | export-csv -notype ($computername + '~applocker.csv')
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-AppLocker%4MSI and Script.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-AppLocker%4MSI and Script.csv')) | export-csv -notype -append ($computername + '~applocker.csv')
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-AppLocker%4Packaged app-Deployment.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-AppLocker%4Packaged app-Deployment.csv')) | export-csv -notype -append ($computername + '~applocker.csv')
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-AppLocker%4Packaged app-Execution.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-AppLocker%4Packaged app-Execution.csv')) | export-csv -notype -append ($computername + '~applocker.csv')
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-WinRM%4Operational.csv"
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-WinRM%4Operational.csv')) | where-object {$_.eventid -in (6,91)} | export-csv -notype ($computername + '~winrm.csv')
+	write-debug "Searching log: $csvdir$computername~Microsoft-Windows-TaskScheduler%4Operational.csv"
 	$t = import-csv ($csvdir + ($computername + '~Microsoft-Windows-TaskScheduler%4Operational.csv'))
 	$t | where-object {$_.eventid -eq 106} | export-csv -notype ($computername + '~NewTask.csv')
 	$t | where-object {$_.eventid -in (140,141,200)} | export-csv -notype ($computername + '~ScheduleTask.csv')
@@ -312,7 +330,7 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "Inquire"
+	$ErrorActionPreference = "Continue"
 	write-log "process-logs.ps1" -fore "green"
 	write-log "Parameters:"
 	write-log "Computername = $Computername"
@@ -339,7 +357,6 @@ write-log "Processing Event Logs for $computername"
 $basedir = get-path $basedir
 $logfiles = get-path $logfiles
 $log = $basedir + 'messages.txt'
-$imagedate = get-content ($basedir + 'ImageDate.txt')
 
 write-log "Converting Event Logs to CSV" -fore "green"
 

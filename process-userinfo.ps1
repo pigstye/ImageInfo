@@ -34,7 +34,7 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 # And it begins
 #########
 if ($debug) {
-	$ErrorActionPreference = "continue"
+	$ErrorActionPreference = "Continue"
 	write-log "process-userinfo.ps1" "green"
 	write-log "Computername = $Computername"
 	write-log "Basedir = $basedir"
@@ -68,12 +68,14 @@ foreach ($user in $users) {
 	write-log "Getting $user Jump Lists"
 	$jl = $userdir + $user + '\Appdata\Roaming\Microsoft\Windows\Recent'
 	$fle = $computername + '~RecentFiles_' + $user + '.csv'
+	Write-Debug "Executing command: $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q"
 	& $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q  | save-messages
 
 	$chromeCache = $userdir + $user + '\AppData\Local\Google\Chrome\User Data\Default\Cache'
 	If (test-path $chromeCache) {
 		write-log "Getting $user Chrome Cache"
 		$output = $computername + '~' + $user + '_ChromeCache.txt'
+		Write-Debug "Executing command: $ccv /folder $chromeCache /stext $output"
 		& $ccv /folder $chromeCache /stext $output
 	}
 
@@ -81,6 +83,7 @@ foreach ($user in $users) {
 	If (test-path $chromeCookie) {
 		write-log "Getting $user Chrome Cookies"
 		$output = $computername + '~' + $user + '_ChromeCookies.csv'
+		Write-Debug "Executing command: $ccov /CookiesFile $chromeCookie /scomma $output"
 		& $ccov /CookiesFile $chromeCookie /scomma $output
 	}
 
@@ -88,6 +91,7 @@ foreach ($user in $users) {
 	If (test-path $chromeHistory) {
 		write-log "Getting $user Chrome History"
 		$output = $computername + '~' + $user + '_Chromehistory.csv'
+		Write-Debug "Executing command: $chv /UserHistoryFile 1 /HistoryFile $chromehistory /scomma $output"
 		& $chv /UserHistoryFile 1 /HistoryFile $chromehistory /scomma $output
 	}
 	
@@ -95,6 +99,7 @@ foreach ($user in $users) {
 	If (test-path $edgeCookie) {
 		write-log "Getting $user Edge Cookies"
 		$output = $computername + '~' + $user + '_EdgeCookies.csv'
+		Write-Debug "Executing command: $ecv /loadfrom 2 /DatabaseFilename $edgeCookie /scomma $output"
 		& $ecv /loadfrom 2 /DatabaseFilename $edgeCookie /scomma $output
 	}
 
@@ -102,6 +107,7 @@ foreach ($user in $users) {
 	If (test-path $ieCache) {
 		write-log "Getting $User IE Cache"
 		$output = $computername + '~' + $user + '_IECache.txt'
+		Write-Debug "Executing command: $iev -f $IECache /stext $output"
 		& $iev -f $IECache /stext $output
 	}
 
@@ -111,6 +117,7 @@ foreach ($user in $users) {
 		$i = 1
 		foreach ($profile in $profiles) {
 			$output = $computername + '~' + $user + '_firefoxDownloads' + $i + '.csv'
+			Write-Debug "Executing command: $ffd /UseNewFirefoxDM 1 /profile $profile.fullname /scomma $output"
 			& $ffd /UseNewFirefoxDM 1 /profile $profile.fullname /scomma $output
 			$i += 1
 		}
@@ -121,6 +128,7 @@ foreach ($user in $users) {
 		$profile1 = $userdir + $user + '\AppData\Local\ConnectedDevicesPlatform\L.' + $user + '\ActivitiesCache.db'
 		$d = ".\" + $user
 		$f = $_ + '\ActivitiesCache.db'
+		Write-Debug "Executing command: $wtxcmd -f $profile1 --csv $d"
 		& $wtxcmd -f $profile1 --csv $d
 	}
 

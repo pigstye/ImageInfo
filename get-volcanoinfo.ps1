@@ -37,6 +37,7 @@ $ScriptDir = split-path -parent $ScriptPath
 . ($psscriptroot + '.\process-lib.ps1')
 
 get-childitem *destinations.csv | foreach-object{
+	Write-Debug "Normalizing the dates for: $_.Name"
 	Normalize-Date $_.name 'SourceCreated' 'SourceCreated,SourceFile,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes'
 }
 
@@ -142,25 +143,30 @@ $imagedate = ($s | sort-object)[$s.length-1]
 
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
 start-process "$pshome\powershell.exe" -argumentlist $arg
+Write-Debug "Executing command: powershell.exe $arg"
 write-log "Starting Log Analysis"
 
 $script = $scriptdir + '\process-registries.ps1'
 $config = $basedir + 'c\windows\System32\config\'
 $userdir = $basedir + 'c\users'
+Write-Debug "Executing command: $script $computername $basedir $config $userdir $userinfo"
 & $script $computername $basedir $config $userdir $userinfo
 
 $windir = $basdir + 'c\windows\'
 $script = $scriptdir + '\process-systeminfo.ps1'
+Write-Debug "Executing command: $script $computername $basedir $windir $userdir"
 & $script $computername $basedir $windir $userdir
 
 $mftfile = $workingdir + 'files\c\$MFT'
 if (test-path $mftfile) {
 	write-log "Parsing MFT"
 	$outfile = $computername + '-mft.csv'
+	Write-Debug "Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
 	& $mft -f $mftfile --csv '.' --csvf $outfile  > logfile.txt
 }
 
 $script = $scriptdir + '\process-userinfo.ps1'
+Write-Debug "Executing command: $script $computername $basedir $userdir $userinfo"
 & $script $computername $basedir $userdir $userinfo
 
 $tmp = get-childitem ((get-date).year.tostring() + "*")
