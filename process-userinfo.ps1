@@ -138,6 +138,11 @@ foreach ($user in $users) {
 		$outfile = $computername + '~' + $user + '_PowerShellLog.txt'
 		copy-item ($userdir + $user + $PowerShellLog) $outfile
 	}
+
+	$Startup = '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\'
+	if (Get-ChildItem ($userdir + $user + $startup)) {
+		write-peristence "Check User Startup directory for $user."
+	}
 }
 
 get-childitem *_ChromeCookies.csv	| foreach-object{Normalize-Date $_.name 'Last Accessed,Created On,Expires'}

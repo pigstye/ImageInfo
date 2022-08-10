@@ -321,6 +321,47 @@ Type 11 ? Cached Interactive (laptops)
 pop-location
 }
 
+function check-persistence {
+<#
+	.Synopsis
+		Checks Event logs for signs of peristence
+	.Description
+		Checks Event logs for signs of peristence
+	.Parameter Computername
+		Computer name to label the log files with
+	.Parameter csvdir
+		The directory where the csv file versions of the log files are kept
+	.NOTES
+		Author: Tom Willett
+		Date: 8/10/2022
+#>
+Param([Parameter(Mandatory=$True)][string]$Computername,
+[Parameter(Mandatory=$True)][string]$csvdir)
+
+$system = import-csv ($csvdir + ($computername + '~system.csv'))
+	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+	if ($stnum -gt 0) {
+		write-persistence "$stnum New Services created in last 30 days"
+	}
+	$stnum = ($system | where-object {$_.eventid -eq 7045 -and $_.event -like '*powershell.exe*'}).length
+	if ($stnum -gt 0) {
+		write-persistence "$stnum New Services created running PowerShell command."
+	}
+	$stnum = ($system | where-object {$_.eventid -eq 4720 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+	if ($stnum -gt 0) {
+		write-persistence "$stnum New Users created in last 30 days"
+	}
+	$stnum = ($system | where-object {($_.eventid -eq 4738 -or $_.eventid -eq 4735) -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+	if ($stnum -gt 0) {
+		write-persistence "$stnum User or Group changes in last 30 days"
+	}
+	$stnum = ($system | where-object {$_.eventid -eq 4688 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30) -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*' -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or $_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')}).length
+	if ($stnum -gt 0) {
+		write-persistence "$stnum lolbins used in last 30 days"
+	}
+	
+}
+
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
 	write-log "Must be run with Administrator Permissions" "red"
@@ -331,11 +372,11 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 #########
 if ($debug) {
 	$ErrorActionPreference = "Continue"
-	write-log "process-logs.ps1" -fore "green"
-	write-log "Parameters:"
-	write-log "Computername = $Computername"
-	write-log "Basedir = $basedir"
-	write-log "Logfiles = $logfiles"
+	write-debug "process-logs.ps1"
+	write-debug "Parameters:"
+	write-debug "Computername = $Computername"
+	write-debug "Basedir = $basedir"
+	write-debug "Logfiles = $logfiles"
 } else {
 	$ErrorActionPreference = "SilentlyContinue"
 }
@@ -377,6 +418,8 @@ write-log "Performing log searches for common vulnerabilities"
 
 get-logsearches $computername ($basedir + 'logsearches\') ($basedir + 'logs-csv\')
 write-log 'Finished Processing Event Log Searches'
+write-log "Searching for Persistence."
+check-persistence
 
 $outstring = @"
 S-1-5-7	Anonymous

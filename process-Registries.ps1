@@ -746,12 +746,12 @@ function Format-HumanReadable([Parameter(Mandatory = $True)][int]$size) {
 #########
 if ($debug) {
 	$ErrorActionPreference = "Continue"
-	write-log "process-Registries.ps1" -fore "green"
-	write-log "Computername = $Computername"
-	write-log "Basedir = $basedir"
-	write-log "Systemdir = $systemdir"
-	write-log "Userdir = $userdir"
-	write-log "Userinfo = $userinfo"
+	write-debug "process-Registries.ps1"
+	write-debug "Computername = $Computername"
+	write-debug "Basedir = $basedir"
+	write-debug "Systemdir = $systemdir"
+	write-debug "Userdir = $userdir"
+	write-debug "Userinfo = $userinfo"
 } else {
 	$ErrorActionPreference = "SilentlyContinue"
 }

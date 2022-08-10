@@ -136,6 +136,17 @@ function write-debug {
 }
 
 function write-persistence {
+<#
+.Synopsis
+	Records information from all modules that might be evidence of persistence
+.Description
+	Records information from all modules that might be evidence of persistence and saves them in a file in the basedir called PossiblePersistence.txt
+.Parameter msg
+	Notification to save 
+.NOTES
+	Author: Tom Willett
+	Date: 8/10/2022
+#>
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
 	add-content -path ($basedir + 'PossiblePersistence.txt') -value $msg
 }
@@ -146,6 +157,7 @@ function Normalize-Date {
 	Reads a csv and outputs a modified csv with date first field and in normal format
 .Description
 	Reads a csv and outputs a modified csv with date first field and in normal format
+	This was added to make it easier to import all the data into Splunk
 .Parameter csvfile
 	csv file to modify
 .Parameter datefield

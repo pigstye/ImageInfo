@@ -66,13 +66,13 @@ function import-iislogs {
 #########
 if ($debug) {
 	$ErrorActionPreference = "Continue"
-	write-log "Process-iislogs.ps1" "green"
-	write-log "Parameters:"
-	write-log "Computername = $Computername"
-	write-log "Basedir = $basedir"
-	write-log "Inetpub = $inetpub"
-	write-log "HTTPErr = $httperr"
-	write-log "logdir = $logdir"
+	write-debug "Process-iislogs.ps1"
+	write-debug "Parameters:"
+	write-debug "Computername = $Computername"
+	write-debug "Basedir = $basedir"
+	write-debug "Inetpub = $inetpub"
+	write-debug "HTTPErr = $httperr"
+	write-debug "logdir = $logdir"
 } else {
 	$ErrorActionPreference = "SilentlyContinue"
 }
