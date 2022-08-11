@@ -282,6 +282,8 @@ function get-logsearches {
 	$t = import-csv ($csvdir + ($computername + '~Microsoft-Windows-TaskScheduler%4Operational.csv'))
 	$t | where-object {$_.eventid -eq 106} | export-csv -notype ($computername + '~NewTask.csv')
 	$t | where-object {$_.eventid -in (140,141,200)} | export-csv -notype ($computername + '~ScheduleTask.csv')
+	write-debug 'Searching for Windows Defender malware detections'
+	import-csv ($csvdir + ($computername + '~Microsoft-Windows-Windows Defender%4Operational.csv')) | Where-Object {$_.event -like '*Severity: Severe*'} | export-csv -notype ($Computername + '~WindowsDefenderAlerts.csv')
 	write-log "Checking for Log Tampering" "cyan"
 	check-logRecordID ($csvdir + ($computername + '~security.csv')) | add-content LogTampering.txt
 	check-logRecordID ($csvdir + ($computername + '~system.csv')) | add-content LogTampering.txt
@@ -321,16 +323,44 @@ Type 11 ? Cached Interactive (laptops)
 pop-location
 }
 
-function check-persistence {
+function get-nonlocalip {
+	<#
+
+	.SYNOPSIS
+
+	Searches the file for non-local IP addresses.
+
+	.DESCRIPTION
+
+	Searches the file for non-local IP addresses.
+	Excludes 127.0.0.0/8
+	10.0.0.0/8
+	172.16.0.0/12
+	192.168.0.0/16
+
+	.PARAMETER filename
+
+	The file to search (required)
+
+	.NOTES
+		
+	Author: Tom Willett
+	Date: 8/10/2022
+	#>
+
+	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True)][string]$filename)
+
+	process {
+		Select-String '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' -allmatches $filename | Select-String -notmatch '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}'| ForEach-Object{$_.matches.value} | ForEach-Object{$filename + ':' + $_} | select -unique
+	}
+}
+
+function check-ioc {
 <#
 	.Synopsis
-		Checks Event logs for signs of peristence
+		Checks Event logs for signs of compromise
 	.Description
-		Checks Event logs for signs of peristence
-	.Parameter Computername
-		Computer name to label the log files with
-	.Parameter csvdir
-		The directory where the csv file versions of the log files are kept
+		Checks Event logs for signs of compromise
 	.NOTES
 		Author: Tom Willett
 		Date: 8/10/2022
@@ -338,7 +368,7 @@ function check-persistence {
 Param([Parameter(Mandatory=$True)][string]$Computername,
 [Parameter(Mandatory=$True)][string]$csvdir)
 
-$system = import-csv ($csvdir + ($computername + '~system.csv'))
+	$system = import-csv ($csvdir + ($computername + '~system.csv'))
 	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
 	if ($stnum -gt 0) {
 		write-ioc "$stnum New Services created in last 30 days"
@@ -359,7 +389,20 @@ $system = import-csv ($csvdir + ($computername + '~system.csv'))
 	if ($stnum -gt 0) {
 		write-ioc "$stnum lolbins used in last 30 days"
 	}
-	
+	if ((get-item ($basedir + 'logsearches\NonLocalIPAddresses.txt')).Length -gt 2) {
+		write-ioc "Check NonLocalIPAddresses.txt in the LogSearches directory."
+	}
+	$defender = import-csv ($csvdir + ($computername + '~Microsoft-Windows-Windows Defender%4Operational.csv'))
+	if ($defender | Where-Object {$_.event -like '*CobaltStrike*'}) {
+		write-ioc "Microsoft Defender detected Cobalt Strike"
+	}
+	if ($defender | Where-Object {$_.event -like '*Meterpreter*'}) {
+		write-ioc "Microsoft Defender detected Meterpreter"
+	}
+	$t = import-csv ($csvdir + ($computername + '~Windows PowerShell.csv'))
+	if ($t | Where-Object {$_.event -like '*DisableRealtimeMonitoring*'}) {
+		write-ioc "Check for Defender set to DisableRealtimeMonitoring"
+	}
 }
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -417,8 +460,12 @@ write-log "Performing log searches for common vulnerabilities"
 
 get-logsearches $computername ($basedir + 'logsearches\') ($basedir + 'logs-csv\')
 write-log 'Finished Processing Event Log Searches'
-write-log "Searching for Persistence."
-check-persistence
+
+write-log "Checking for Non-local IP Addresses in the logs."
+(get-childitem ($csvdir + '*.csv')).fullname | get-nonlocalip | add-content ($logsearches + 'NonLocalIPAddresses.txt')
+
+write-log "Searching for IOCs."
+check-ioc
 
 $outstring = @"
 S-1-5-7	Anonymous
@@ -431,10 +478,6 @@ S-1-5-32-544	Local Admins
 S-1-5-80	Service Accounts
 "@
 $outstring | add-content -enc utf8 WindowsCommonRids.txt
-Push-Location ($basedir + 'logsearches\')
-write-log "Checking for Non-local IP Addresses in the logs."
-get-childitem *.csv,*.txt -r | ForEach-Object{$out = $_.fullname + ': ' + (get-content $_ | select-string -allmatches '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | select-string -notmatch '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}').matches.groups.captures[0].value; $out} | Select-Object -unique | add-content 'NonLocalIPAddresses.txt'
-Pop-Location
 write-log "Finished Processing Logs"
 pop-location
 

@@ -807,6 +807,10 @@ write-log "Getting User Info from Registries"
 Write-Debug "Processing UserActivity with userActivity.reb"
 get-regbatch -title 'UserActivity' -computer $computername -batch 'userActivity.reb' -path $userDir -out '~UserActivity.csv'
 
+if (get-childitem *recentdocs.csv | where-object{import-csv $_ | where-object {$_.extension -eq '.iso'}}){
+	write-ioc "ISO files have been opened - check *recentDocs.csv files"
+}
+
 set-location ..
 
 get-systeminfo $computername $basedir $userinfo $userdir
@@ -821,6 +825,8 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 }
 
 import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace 'ROOT\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
+
+
 
 write-log 'Normalizing Data' -fore green
 Normalize-Date ($computername + '~mappedDrives.csv') ""
