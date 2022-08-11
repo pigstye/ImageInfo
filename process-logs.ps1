@@ -97,8 +97,8 @@ function check-logRecordID {
 #>
 
 	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$LogFile)
-	write-debug "Checking $logfile for gaps in record ID"
 	begin {
+		write-debug "Checking $logfile for gaps in record ID"
 		$BoundaryEvents = @()
 	}
 
@@ -397,7 +397,6 @@ write-log "Processing Event Logs for $computername"
 
 $basedir = get-path $basedir
 $logfiles = get-path $logfiles
-$log = $basedir + 'messages.txt'
 
 write-log "Converting Event Logs to CSV" -fore "green"
 
@@ -432,6 +431,10 @@ S-1-5-32-544	Local Admins
 S-1-5-80	Service Accounts
 "@
 $outstring | add-content -enc utf8 WindowsCommonRids.txt
+Push-Location ($basedir + 'logsearches\')
+write-log "Checking for Non-local IP Addresses in the logs."
+get-childitem *.csv,*.txt -r | ForEach-Object{$out = $_.fullname + ': ' + (get-content $_ | select-string -allmatches '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | select-string -notmatch '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}').matches.groups.captures[0].value; $out} | Select-Object -unique | add-content 'NonLocalIPAddresses.txt'
+Pop-Location
 write-log "Finished Processing Logs"
 pop-location
 
