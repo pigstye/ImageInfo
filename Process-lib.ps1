@@ -135,12 +135,12 @@ function write-debug {
 	}
 }
 
-function write-persistence {
+function write-ioc {
 <#
 .Synopsis
-	Records information from all modules that might be evidence of persistence
+	Records information from all modules that might be evidence of compromise
 .Description
-	Records information from all modules that might be evidence of persistence and saves them in a file in the basedir called PossiblePersistence.txt
+	Records information from all modules that might be evidence of compromise and saves them in a file in the basedir called IOC.txt
 .Parameter msg
 	Notification to save 
 .NOTES
@@ -148,7 +148,7 @@ function write-persistence {
 	Date: 8/10/2022
 #>
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
-	add-content -path ($basedir + 'PossiblePersistence.txt') -value $msg
+	add-content -path ($basedir + 'IOC.txt') -value $msg
 }
 
 function Normalize-Date {
