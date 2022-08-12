@@ -465,7 +465,7 @@ write-log "Checking for Non-local IP Addresses in the logs."
 (get-childitem ($csvdir + '*.csv')).fullname | get-nonlocalip | add-content ($logsearches + 'NonLocalIPAddresses.txt')
 
 write-log "Searching for IOCs."
-check-ioc
+check-ioc $Computername $csvdir
 
 $outstring = @"
 S-1-5-7	Anonymous
