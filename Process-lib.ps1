@@ -9,11 +9,11 @@
 		V1.0
 #>
 #basic configuration 
-$lava_dir = '\\lava\triage_processing\'
-#Local path where processing will be done
-$localPath = 'e:\lava\'
 $ScriptDir = split-path -parent $MyInvocation.MyCommand.Path
 
+#These configuration lines list the location the script will look for the auxiliarly programs - these can be changed
+#to reflect a custom configuration. The only caveat is the Eric Zimmeramn registry batch files *.reb are custom versions 
+#and expected to be at $recmddir. You can move them or leave that configuration alone.
 $FFd = $scriptdir + '\Nirsoft\FireFoxDownloadsview.exe'
 $RBCmd = $scriptdir + '\ericzimmerman\RBcmd.exe'
 $appCacheCmd = $scriptdir + "\EricZimmerman\AmcacheParser.exe"
