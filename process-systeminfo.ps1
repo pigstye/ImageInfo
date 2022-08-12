@@ -230,7 +230,7 @@ if ($st | Where-Object {$_.Actions -like '*.ps1*'}) {
 	write-ioc "Check for Scheduled Task running a PowerShell script"
 }
 if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
-	write-ioc "Check for Scheduled Task running a Visual Basic"
+	write-ioc "Check for Scheduled Task running a Visual Basic (.vbs)"
 }
 $stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge [datetime]::parse($imagedate).adddays(-30)}).length
 if ($stnum -gt 0) {

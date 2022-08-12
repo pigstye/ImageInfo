@@ -1,4 +1,6 @@
 ese database dumper
 https://github.com/MarkBaggett/ese-analyst
-This file should be here
+These files should be here
 \ese2csv\ese2csv.exe
+\ese2csv\srudb_plugin.py
+\ese2csv\spartan_plugin.py

@@ -46,11 +46,9 @@ if ($net -eq 6) {
     $EZsbe = ($page | Select-String '(https://.*?SBECmd\.zip)').matches.value
     $EZwxt = ($page | Select-String '(https://.*?WxTCmd\.zip)').matches.value
     $EZrecmd = ($page | Select-String '(https://.*?RECmd\.zip)').matches.value
-
 }
 $tools = $EZamcache,$EZappcompat,$EZjlecmd,$EZlecmd,$EZmftcmd,$EZpemcd,$EZrbcmd,$EZrecmd,$EZrfc,$EZsbe,$EZwxt
 $dest = $appCacheCmd,$appCompCmd,$jleCmd,$leCmd,$mft,$peCmd,$rbcmd,$recmd,$rfc,$sb,$wtxcmd
-write-host "Downloading Eric Zimmerman's Tools" -ForegroundColor Yellow
 for($i=0;$i -lt 11;$i++) {
     $uri = $tools[$i]
     $outfile = ($dest[$i] -replace '.exe','.zip')
@@ -78,6 +76,7 @@ Remove-Item ($nirsoftdir + '*.zip')
 
 write-host "Downloading ese2csv.exe from https://github.com/MarkBaggett/ese-analyst" -ForegroundColor Yellow
 invoke-webrequest -uri https://github.com/MarkBaggett/ese-analyst/raw/master/ese2csv.exe -OutFile $srum
+invoke-webrequest -uri https://raw.githubusercontent.com/MarkBaggett/ese-analyst/master/srudb_plugin.py -OutFile ($srum + 'srudb_plugin.py')
 
 write-host 'Finished. Run get-imageinfo.ps1 by mounting a forensic image. In PowerShell run as Administrator cd to directory where you want the information and'
 write-host "PS> \imageinfo\get-imageinfo.ps1 <drive>"
