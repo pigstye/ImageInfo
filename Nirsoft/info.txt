@@ -1,12 +1,12 @@
 Nirsoft
 https://www.nirsoft.net/
 These files should be here
-\Nirsoft\FireFoxDownloadsview.exe
 \Nirsoft\appcrashview.exe
 \Nirsoft\browsinghistoryview.exe
 \Nirsoft\ChromeCookiesview.exe
 \Nirsoft\ChromeCacheview.exe
 \Nirsoft\ChromeHistoryview.exe
 \Nirsoft\EdgeCookiesview.exe
+\Nirsoft\FireFoxDownloadsview.exe
 \Nirsoft\IECacheview.exe
 \Nirsoft\MozillaCacheview.exe
