@@ -77,7 +77,8 @@ Remove-Item ($nirsoftdir + '*.zip')
 write-host "Downloading ese2csv.exe from https://github.com/MarkBaggett/ese-analyst" -ForegroundColor Yellow
 invoke-webrequest -uri https://github.com/MarkBaggett/ese-analyst/raw/master/ese2csv.exe -OutFile $srum
 invoke-webrequest -uri https://raw.githubusercontent.com/MarkBaggett/ese-analyst/master/srudb_plugin.py -OutFile ($srum + 'srudb_plugin.py')
+invoke-webrequest -uri https://raw.githubusercontent.com/MarkBaggett/ese-analyst/master/spartan_plugin.py -OutFile ($srum + 'spartan_plugin.py')
 
-write-host 'Finished. Run get-imageinfo.ps1 by mounting a forensic image. In PowerShell run as Administrator cd to directory where you want the information and'
-write-host "PS> \imageinfo\get-imageinfo.ps1 <drive>"
-Write-Host "It will create a directory named after the host and start populating information."
+write-host 'Finished. Run get-imageinfo.ps1 by mounting a forensic image. In PowerShell run as Administrator cd to directory where you want the information and' -ForegroundColor Cyan
+write-host "PS> \imageinfo\get-imageinfo.ps1 <drive>" -ForegroundColor Gray
+Write-Host "It will create a directory named after the host and start populating information." -ForegroundColor Cyan
