@@ -1,4 +1,5 @@
 Bits DB Parser	
 https://github.com/fireeye/BitsParser
+This is a Python version. I have compiled it and included it here.
 File that should be here.
 \BitsParser\BitsParser.exe 
