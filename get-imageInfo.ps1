@@ -185,13 +185,14 @@ Normalize-Date ($computername + '~mft.csv') 'LastModified0x10,Created0x10,Create
 
 get-childitem * | where-object { $_.length -eq 0} | remove-item
 
+write-host "Compressing files to create zip for easy import into Splunk"
 compress-archive -Path ($computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip')
-compress-archive -Path ('.\UserInfo\' + $computername + '*.csv')  -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
-compress-archive -Path ('.\Sumdatabase\' + $computername + '*.csv')  -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
-compress-archive -Path ('.\Sumdatabase\Current\' + $computername + '*.csv')  -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
-compress-archive -Path ('.\SRUM\' + $computername + '*.csv')  -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
-compress-archive -Path ('.\Shellbags\' + $computername + '*.csv')  -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
-compress-archive -Path ('.\UserInfo\' + $computername + '*.csv')  -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
+compress-archive -Path ('.\UserInfo\' + $computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
+compress-archive -Path ('.\Sumdatabase\' + $computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
+compress-archive -Path ('.\Sumdatabase\Current\' + $computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
+compress-archive -Path ('.\SRUM\' + $computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
+compress-archive -Path ('.\Shellbags\' + $computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
+compress-archive -Path ('.\UserInfo\' + $computername + '*.csv') -DestinationPath ('..\' + $computername + '-splunk_in.zip') -Update
 
 set-location ..
 
