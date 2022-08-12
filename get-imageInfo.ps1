@@ -69,6 +69,7 @@ function get-computername {
 	#>
 	Param([Parameter(Mandatory=$True)][string]$drv)
 	$computername = get-regvalue ($drv + ':\Windows\System32\config\SYSTEM') '\Controlset001\control\computername\Computername\' 'ComputerName'
+	$computername = $computername.trim()
 	if(-not ((split-path ((get-location).tostring()) -leaf) -eq $computername)) {
 		if (-not (test-path $computername)) {
 			mkdir $computername  >> $null
@@ -178,7 +179,7 @@ write-debug "$script $computername $basedir $userdir $userinfo"
 
 set-location $basedir
 Write-Log 'Exporting MFT'
-write-debug "$mft -f ($drive + ':\$MFT') --csv $basedir --csvf ($computername + '~mft.csv')"
+($basedir + $computername + '~mft.csv')
 & $mft -f ($drive + ':\$MFT') --csv $basedir --csvf ($computername + '~mft.csv')
 Normalize-Date ($computername + '~mft.csv') 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
