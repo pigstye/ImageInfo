@@ -4,6 +4,13 @@ Version: 1
 Id: 87fafa06-0c44-48b1-9f2c-2eca469d1309
 Keys:
     -
+        Description: User Information
+        HiveType: NtUser
+        Category: User Activity
+        KeyPath: Volatile Environment
+        Recursive: True
+        Comment: Contains username and environment
+    -
         Description: Feature Usage
         HiveType: NtUser
         Category: User Activity
