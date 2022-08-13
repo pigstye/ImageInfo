@@ -83,9 +83,15 @@ There are multiple different Windows versions and the scripts look for and proce
 
 ## Setup
 
-The scripts `get-imageinfo.ps1` and `get-volcanoinfo.ps1` require some external programs to run correctly. The location of these programs is set in process-lib.ps1, you are welcome to change them if you have them in another location. The script will run without any of the programs; it will skip it what it doesn't find and go on. I have found it easier to just leave them where they are. Let's assume you have the script in a directory called `\imageinfo\` the directory structure will look like this with the standard process-lib.ps1 setup.
+The scripts `get-imageinfo.ps1` and `get-volcanoinfo.ps1` require some external programs to run correctly. The location of these programs is set in process-lib.ps1, you are welcome to change them if you have them in another location. The script will run without any of the programs; it will skip it what it doesn't find and go on. I have found it easier to just leave the programs where they are. Let's assume you have the script in a directory called `\imageinfo\` the directory structure will look like this with the standard process-lib.ps1 setup.
 
 ![DirectoryStructure](images/DirStruct.png)
+
+You are welcome to fill all the required files on your own.
+
+There is a setup script here Setup-Imageinfo.ps1 which will download and place the correct programs in the locations configured in process-lib.ps1. The script is ready to run at that point.
+
+I prefer to get all of Eric Zimmerman's and Nir Sofer's tools because there are many I use that are not required for the get-imageinfo.ps1 script to run.
 
 ## [Eric Zimmerman's tools](https://ericzimmerman.github.io/#!index.md)
 
