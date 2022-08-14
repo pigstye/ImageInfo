@@ -64,8 +64,14 @@ function import-iislogs {
 
 # And it begins
 #########
+$ErrorActionPreference = "SilentlyContinue"
+#Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
+trap {
+	$error[0] | write-debug
+	($PSItem.InvocationInfo).positionmessage | write-debug
+}
+
 if ($debug) {
-	$ErrorActionPreference = "Continue"
 	write-debug "Process-iislogs.ps1"
 	write-debug "Parameters:"
 	write-debug "Computername = $Computername"
@@ -73,8 +79,6 @@ if ($debug) {
 	write-debug "Inetpub = $inetpub"
 	write-debug "HTTPErr = $httperr"
 	write-debug "logdir = $logdir"
-} else {
-	$ErrorActionPreference = "SilentlyContinue"
 }
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())

@@ -82,11 +82,13 @@ function get-computername {
 
 # And it begins
 #########
-if ($debug) {
-	$ErrorActionPreference = "Continue"
-} else {
-	$ErrorActionPreference = "SilentlyContinue"
+$ErrorActionPreference = "SilentlyContinue"
+#Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
+trap {
+	$error[0] | write-debug
+	($PSItem.InvocationInfo).positionmessage | write-debug
 }
+
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {

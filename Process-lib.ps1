@@ -129,9 +129,8 @@ function write-debug {
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
 	if ($debug) {
 		$dte = Get-Date
-		$msg = $dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg
-		write-host -ForegroundColor DarkYellow $msg
-		$msg >> ($basedir + 'debug.txt')
+		write-host -ForegroundColor Yellow $msg
+		$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content ($basedir + 'debuglog.txt')
 	}
 }
 

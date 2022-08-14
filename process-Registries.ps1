@@ -744,16 +744,20 @@ function Format-HumanReadable([Parameter(Mandatory = $True)][int]$size) {
 
 # And it begins
 #########
+$ErrorActionPreference = "SilentlyContinue"
+#Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
+trap {
+	$error[0] | write-debug
+	($PSItem.InvocationInfo).positionmessage | write-debug
+}
+
 if ($debug) {
-	$ErrorActionPreference = "Continue"
 	write-debug "process-Registries.ps1"
 	write-debug "Computername = $Computername"
 	write-debug "Basedir = $basedir"
 	write-debug "Systemdir = $systemdir"
 	write-debug "Userdir = $userdir"
 	write-debug "Userinfo = $userinfo"
-} else {
-	$ErrorActionPreference = "SilentlyContinue"
 }
 
 $basedir = get-path $basedir

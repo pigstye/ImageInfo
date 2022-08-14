@@ -166,16 +166,20 @@ function get-task {
 
 # And it begins
 #########
+$ErrorActionPreference = "SilentlyContinue"
+#Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
+trap {
+	$error[0] | write-debug
+	($PSItem.InvocationInfo).positionmessage | write-debug
+}
+
 if ($debug) {
-	$ErrorActionPreference = "Continue"
-	write-host "Process-SystemInfo.ps1" -for green
-	write-host "Parameters:"
-	write-host "Computername = $Computername"
-	write-host "Basedir = $basedir"
-	write-host "Windir = $windir"
-	write-host "Userdir = $userdir"
-} else {
-	$ErrorActionPreference = "SilentlyContinue"
+	write-debug  "Process-SystemInfo.ps1"
+	write-debug  "Parameters:"
+	write-debug  "Computername = $Computername"
+	write-debug  "Basedir = $basedir"
+	write-debug  "Windir = $windir"
+	write-debug  "Userdir = $userdir"
 }
 
 $basedir = get-path $basedir
