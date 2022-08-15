@@ -871,6 +871,12 @@ Normalize-Date ($computername + '~UserActivity_Taskband.csv') ''
 
 set-location $basedir
 
+$gpu = import-csv ($computername + '~SystemInfo.csv') | where {$_.KeyPath -like "ROOT\Microsoft\Windows\CurrentVersion\Group Policy\DataStore\S*\0" -and $_.valuename -eq 'szName'}
+
+$out = ($computername + '-GroupPolicyUsers.txt')
+"Group Policy Users" | add-content $out
+$gpu | foreach-object {$_.ValueData + ' - ' + $_.keypath.substring(61,44) | add-content $out}
+
 get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 	copy-item (".\" + $_.Name + "\*") .
 	remove-item -recurse (".\" + $_.Name)
