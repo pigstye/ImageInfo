@@ -54,7 +54,7 @@ Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyProp
 		$ErrorActionPreference = "SilentlyContinue"
 	}
 	process {
-		tracerpt $logname -o tmp.xml -of xml -lr -y | save-messages
+		tracerpt $logname -o tmp.xml -of xml -lr -y | write-debug
 		[xml]$do = get-content .\tmp.xml
 		$DeliveryOptimizationLog = @()
 		foreach ($evt in $do.Events.Event) {
@@ -169,6 +169,7 @@ function get-task {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
+	"###+++###" | Write-Debug
 	$error[0] | write-debug
 	($PSItem.InvocationInfo).positionmessage | write-debug
 }
@@ -194,29 +195,29 @@ write-log 'Getting Systeminfo'
 write-log "Getting Application Compatability Cache (ShimCache)"
 $outfile = $computername + '~AppCompatCache.csv'
 Write-Debug "Executing command: $appCompCmd -f $windir'System32\config\SYSTEM' --csv . --csvf $outfile"
-& $appCompCmd -f ($windir + 'System32\config\SYSTEM') --csv . --csvf $outfile | save-messages
+& $appCompCmd -f ($windir + 'System32\config\SYSTEM') --csv . --csvf $outfile | write-debug
 
 write-log "Getting AmCache"
 $outfile = $computername + '~AmCache.csv'
 Write-Debug "Executing command: $appCacheCmd -f $windir'appcompat\programs\Amcache.hve' --csv . --csvf $outfile"
-& $appCacheCmd -f ($windir + 'appcompat\programs\Amcache.hve') --csv . --csvf $outfile | save-messages
+& $appCacheCmd -f ($windir + 'appcompat\programs\Amcache.hve') --csv . --csvf $outfile | write-debug
 
 write-log "Getting Recent File Cache"
 $recentFC = $windir + 'AppCompat\Programs\RecentFileCache.bcf'
 $outfile = $computername + '~RecentFileCache.csv'
 Write-Debug "Executing command: $rfc -f $recentFC --csv . --csvf $outfile"
-& $rfc -f $recentFC --csv "." --csvf $outfile | save-messages
+& $rfc -f $recentFC --csv "." --csvf $outfile | write-debug
 
 write-log "Getting Recycle Bin"
 $RB = $drive + ':\$Recycle.Bin'
 $outfile = $computername + '~RecycleBin.csv'
 Write-Debug "Executing command: $RBCMD -d $RB --csv . --csvf $outfile"
-& $RBCMD -d $RB --csv "." --csvf $outfile | save-messages
+& $RBCMD -d $RB --csv "." --csvf $outfile | write-debug
 
 write-log "Getting Browser History"
 $outfile = $computername + '~browserhistory.csv'
 Write-Debug "Executing command: $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)"
-& $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)  | save-messages
+& $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)  | write-debug
 
 write-log "Getting Application Crash Info"
 $outfile = $computername + '~AppCrash.txt'
@@ -244,14 +245,14 @@ if ($stnum -gt 0) {
 write-log 'Getting Prefetch'
 $outfile = $computername + '~Prefetch.csv'
 Write-Debug "Executing command: $pecmd -d $windir'prefetch' --csv . --csvf $outfile"
-& $pecmd -d ($windir + 'prefetch') --csv '.' --csvf $outfile | save-messages
+& $pecmd -d ($windir + 'prefetch') --csv '.' --csvf $outfile | write-debug
 
 if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	write-log 'Getting SRUM data'
 	mkdir Srum  >> $null
 	set-location srum
-	Write-Debug "Executing command: $srum -p srudb_plugin $windir'system32\sru\srudb.dat'"
-	& $srum -p srudb_plugin ($windir + 'system32\sru\srudb.dat') | save-messages
+	Write-Debug "Executing command: $srum -p ese2csv.exesrudb_plugin $windir'system32\sru\srudb.dat'"
+	& $srum -p ese2csv.exesrudb_plugin ($windir + 'system32\sru\srudb.dat') | write-debug
 	
 	Normalize-Date 'Application Resource Usage.csv' 'TimeStamp'
 	move-item 'Application Resource Usage.csv' ($computername + '~SRUM_Application_Resource_Usage.csv')
@@ -284,18 +285,18 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 
 $polfile = $scriptdir + '\parse-polfile.ps1'
 . $polfile
-write-log "Local Group Policy saved to " $computername + "~LocalGroupPolicy.txt"
+write-log "Local Group Policy saved to " ($computername + "~LocalGroupPolicy.txt")
 get-childitem ($windir + 'system32\grouppolicy\*.pol') -recurse | foreach-object{parse-polfile $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 get-childitem ($windir + 'system32\grouppolicy\*.xml') -recurse | foreach-object{get-content $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 
 write-log 'Getting WMI data'
 Write-Debug "Executing command: $wmi -i $windir'system32\wbem\repository\objects.data' -o $computername'~wmi.csv')"
-& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi.csv') | save-messages 2> $null
+& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi.csv') | write-debug 2> $null
 Write-Debug "Executing command: $wmi2 $windir'system32\wbem\repository\objects.data' > $computername'~wmi.txt'"
 & $wmi2 ($windir + 'system32\wbem\repository\objects.data') > ($computername + '~wmi.txt')
 if (test-path ($windir + 'system32\wbem\repository\fs\objects.data')) {
 	Write-Debug "Executing command: $wmi -i $windir'system32\wbem\repository\objects.data' -o $computername'~wmi-fs.csv'"
-	& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi-fs.csv') | save-messages 2> $null
+	& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi-fs.csv') | write-debug 2> $null
 	Write-Debug "Executing command: $wmi2 $windir'system32\wbem\repository\objects.data' >> $computername'~wmi.txt'"
 	& $wmi2 ($windir + 'system32\wbem\repository\objects.data') >> ($computername + '~wmi.txt')
 }
@@ -320,16 +321,16 @@ If (Test-path ($windir + 'System32\LogFiles\Sum\')) {
 	set-location SumDatabase
 	copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
 	Write-Debug "Executing command: $srum .\SystemIdentity.mdb"
-	& $srum .\SystemIdentity.mdb | save-messages
+	& $srum .\SystemIdentity.mdb | write-debug
 	mkdir Current >> $null
 	move-item current.mdb Current
 	set-location Current
 	Write-Debug "Executing command: $srum current.mdb"
-	& $srum current.mdb | save-messages
+	& $srum current.mdb | write-debug
 	set-location ..
 	$l = import-csv .\CHAINED_DATABASES.csv
 	foreach ($r in $l) {mkdir $r.year  >> $null;move-item $r.filename $r.year}
-	foreach ($r in $l) {set-location $r.year;& $srum *.mdb | save-messages ;set-location ..}
+	foreach ($r in $l) {set-location $r.year;& $srum *.mdb | write-debug ;set-location ..}
 	get-childitem *.csv -recurse | foreach-object{push-location $_.directory;rename-item $_.name ($computername + '~' + $_.name);pop-location}
 	set-location ..
 } else {
@@ -337,8 +338,8 @@ If (Test-path ($windir + 'System32\LogFiles\Sum\')) {
 }
 
 $DOlogPath = ''
-if (Test-Path $windir + 'Logs\dosvc') {$DOlogPath = $windir + 'Logs\dosvc'}
-if (Test-Path $windir + 'ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Logs') {
+if (Test-Path ($windir + 'Logs\dosvc')) {$DOlogPath = $windir + 'Logs\dosvc'}
+if (Test-Path ($windir + 'ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Logs')) {
 	$DOlogPath = $windir + 'ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Logs'
 }
 if ($DOlogPath -ne '') {
@@ -355,7 +356,7 @@ if ($DOlogPath -ne '') {
 if ((get-item $windir).parent.name -ne 'C') {
 	write-log 'Getting Lnk Files'
 	$outfile = $computername + '~LnkFiles.csv'
-	& $leCmd -d ($drive + ':\') --csv "." --csvf $outfile | save-messages
+	& $leCmd -d ($drive + ':\') --csv "." --csvf $outfile | write-debug
 }
 
 if (test-path ($windir + 'system32\dhcp')) {

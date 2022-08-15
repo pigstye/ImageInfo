@@ -61,9 +61,7 @@ function update-systemstatuslog {
 	$DateTime = (get-date).tostring("M-d-yyyy h:mm")
 	$statusLog = $localpath + 'SystemStatusLog.txt'
 	$DateTime + ' - ' + $msg | add-content $statusLog
-	if ($debug) {
-		write-host ("Status: " + $msg)
-	}
+	write-debug ("Status: " + $msg)
 }
 function write-log {
 	param([Parameter(Mandatory=$True)][string]$msg,[Parameter(Mandatory=$false)][string]$fore="white")
@@ -94,9 +92,7 @@ function write-Hostlog {
 	}
 	$dte = get-date
 	$dte.tostring("M-d-yyyy HH:mm") + ',' + $msg | add-content $msglog
-	if ($debug) {
-		write-host ("HostLog: " + $dte.tostring("M-d-yyyy HH:mm") + ',' + $msg)
-	}
+	write-debug  $msg
 }
 
 function add-slash {
@@ -117,14 +113,6 @@ function get-path {
 	return $tmp
 }
 
-function save-messages {
-	Param([Parameter(Mandatory=$false,ValueFromPipeline=$true)][string]$msg="")
-	$msg >> ($basedir + 'messages.txt')
-	if ($debug) {
-		write-host $msg
-	}
-}
-
 function write-debug {
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
 	if ($debug) {
@@ -139,7 +127,7 @@ function write-ioc {
 .Synopsis
 	Records information from all modules that might be evidence of compromise
 .Description
-	Records information from all modules that might be evidence of compromise and saves them in a file in the basedir called IOC.txt
+	Records information from all modules that might be evidence of compromise and saves them in a file in the basedir called _ThingsToCheck.txt
 .Parameter msg
 	Notification to save 
 .NOTES
@@ -147,7 +135,7 @@ function write-ioc {
 	Date: 8/10/2022
 #>
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
-	add-content -path ($basedir + 'IOC.txt') -value $msg
+	add-content -path ($basedir + '_ThingsToCheck.txt') -value $msg
 }
 
 function Normalize-Date {

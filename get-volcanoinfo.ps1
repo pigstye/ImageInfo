@@ -96,6 +96,7 @@ $api2 = 'GetDriveType','GetSystemDEPPolicy','GetTickCount64','NtQuerySystemInfor
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
+	"###+++###" | Write-Debug
 	$error[0] | write-debug
 	($PSItem.InvocationInfo).positionmessage | write-debug
 }

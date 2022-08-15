@@ -36,6 +36,7 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
+	"###+++###" | Write-Debug
 	$error[0] | write-debug
 	($PSItem.InvocationInfo).positionmessage | write-debug
 }
@@ -69,11 +70,12 @@ $userName > UserNames.txt
 write-log 'Processing Each User'
 
 foreach ($user in $users) {
+	Write-Debug "User $user being processed"
 	write-log "Getting $user Jump Lists"
 	$jl = $userdir + $user + '\Appdata\Roaming\Microsoft\Windows\Recent'
 	$fle = $computername + '~RecentFiles_' + $user + '.csv'
 	Write-Debug "Executing command: $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q"
-	& $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q  | save-messages
+	& $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q  | write-debug
 
 	$chromeCache = $userdir + $user + '\AppData\Local\Google\Chrome\User Data\Default\Cache'
 	If (test-path $chromeCache) {
@@ -131,7 +133,6 @@ foreach ($user in $users) {
 		write-log "Getting $user Win10 Activity"
 		$profile1 = $userdir + $user + '\AppData\Local\ConnectedDevicesPlatform\L.' + $user + '\ActivitiesCache.db'
 		$d = ".\" + $user
-		$f = $_ + '\ActivitiesCache.db'
 		Write-Debug "Executing command: $wtxcmd -f $profile1 --csv $d"
 		& $wtxcmd -f $profile1 --csv $d
 	}

@@ -85,6 +85,7 @@ function get-computername {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
+	"###+++###" | Write-Debug
 	$error[0] | write-debug
 	($PSItem.InvocationInfo).positionmessage | write-debug
 }
@@ -117,8 +118,6 @@ mkdir 'userinfo' >> $null
 $userinfo = get-path 'userinfo'
 Write-Debug "Logdir = $logdir"
 $logdir = get-path 'logs'
-
-$module = ('Log Files','Registries','System Info','User Info')
 
 write-log "Copying Event Logs"
 $evtlogs = $windir + "system32\winevt\logs\"

@@ -67,6 +67,7 @@ function import-iislogs {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
+	"###+++###" | Write-Debug
 	$error[0] | write-debug
 	($PSItem.InvocationInfo).positionmessage | write-debug
 }
@@ -101,7 +102,7 @@ $httperr = get-path $httperr
 
 Push-Location $basedir
 
-(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Processing IIS Logs' | save-messages
+(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Processing IIS Logs' | write-debug
 
 
 if (test-path ($inetpub + 'logs' )) {
@@ -146,5 +147,5 @@ if (test-path ($inetpub + 'logs' )) {
 	start-sleep -s 5
 }
 
-(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Finished processing IIS Logs' | save-messages
+(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Finished processing IIS Logs' | write-debug
 pop-location

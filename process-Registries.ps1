@@ -67,7 +67,7 @@ function get-regbatch {
 	$batchCmd = $recmddir + $batch
 	$outfile = $computer + $out
 	Write-Debug "Executing Command: $recmd -d $path --bn $batchCmd --csv . --csvf $outfile"
-	& $recmd -d $path --bn $batchCmd --csv '.' --csvf $outfile | save-messages -ErrorAction SilentlyContinue
+	& $recmd -d $path --bn $batchCmd --csv '.' --csvf $outfile | write-debug
 }
 
 function get-unquotedservicepaths 
@@ -747,6 +747,7 @@ function Format-HumanReadable([Parameter(Mandatory = $True)][int]$size) {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
+	"###+++###" | Write-Debug
 	$error[0] | write-debug
 	($PSItem.InvocationInfo).positionmessage | write-debug
 }
@@ -792,7 +793,7 @@ mkdir Shellbags  >> $null
 set-location ShellBags
 	write-log "Getting Shellbags"
 	Write-Debug "Executing command: & $sb -d ($userDir) --csv ."
-	& $sb -d ($userDir) --csv . | save-messages -ErrorAction SilentlyContinue
+	& $sb -d ($userDir) --csv . | write-debug
 	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
 					move-item $_.name $csvfile
 					Normalize-Date $csvfile 'AccessedOn'
