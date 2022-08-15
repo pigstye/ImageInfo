@@ -4,6 +4,13 @@ Version: 1
 Id: 1e145fa4-70ca-478f-b0b9-a148e4ba1b90
 Keys:
     -
+        Description: GroupPolicy Users
+        HiveType: Software
+        Category: User Info
+        KeyPath: Microsoft\Windows\CurrentVersion\Group Policy\DataStore\*
+        Recursive: True
+        Comment: 0 key Under Each User SID contains username domain 
+    -
         Description: IsCloudDomainJoined
         HiveType: Amcache
         Category: System Info

@@ -71,6 +71,12 @@ Date: 5/19/2021
 Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$FullName)
 
 	process {
+		trap {
+			"###+++###" | Write-Debug
+			$error[0] | write-debug
+			($PSItem.InvocationInfo).positionmessage | write-debug
+		}
+
 		$fext = [system.io.path]::getextension($FullName)
 		$filter = @{Path="$FullName"}
 		if ($fext -eq ".evt") {
@@ -155,6 +161,12 @@ function get-logsearches {
 	Param([Parameter(Mandatory=$True)][string]$Computername,
 	[Parameter(Mandatory=$True)][string]$logsearches,
 	[Parameter(Mandatory=$True)][string]$csvdir)
+	
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
 	
 	push-location $LogSearches
 
@@ -368,6 +380,12 @@ function check-ioc {
 Param([Parameter(Mandatory=$True)][string]$Computername,
 [Parameter(Mandatory=$True)][string]$csvdir)
 
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
+
 	$system = import-csv ($csvdir + ($computername + '~system.csv'))
 	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
 	if ($stnum -gt 0) {
@@ -467,15 +485,15 @@ get-logsearches $computername ($basedir + 'logsearches\') ($basedir + 'logs-csv\
 write-log 'Finished Processing Event Log Searches'
 
 write-log "Checking for Non-local IP Addresses in the logs."
-(get-childitem ($csvdir + '*.csv')).fullname | get-nonlocalip | add-content ($logsearches + 'NonLocalIPAddresses.txt')
+(get-childitem ($basedir + 'logs-csv\*.csv')).fullname | get-nonlocalip | add-content ($logsearches + 'NonLocalIPAddresses.txt')
 
 write-log "Searching for IOCs."
-check-ioc $Computername $csvdir
+check-ioc $Computername ($basedir + 'logs-csv\')
 
 $outstring = @"
 S-1-5-7	Anonymous
 S-1-5-18	Local System
-S-1-5-19	NT Authority
+S-1-5-19	NT Authority($basedir + 'logs-csv\
 S-1-5-20	NT Authority
 S-1-5-21-domain-500	Administrator
 S-1-5-21-domain-512	Domain Admins

@@ -122,6 +122,13 @@ function get-task {
 				Date: 7/1/2021
 		#>
 		Param([Parameter(Mandatory=$True)][string]$propname)
+
+		trap {
+			"###+++###" | Write-Debug
+			$error[0] | write-debug
+			($PSItem.InvocationInfo).positionmessage | write-debug
+		}
+		
 		$node = $task.task.$propname
 		$properties = ($node | get-member -MemberType property).name
 		$info = ""

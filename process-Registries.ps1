@@ -63,6 +63,12 @@ function get-regbatch {
 		[Parameter(Mandatory=$True)][string]$batch,
 		[Parameter(Mandatory=$True)][string]$path,
 		[Parameter(Mandatory=$True)][string]$out)
+	
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
 	write-log "Getting $Title"
 	$batchCmd = $recmddir + $batch
 	$outfile = $computer + $out
@@ -117,12 +123,18 @@ function Get-systeminfo {
 		Date: 8/24/2021
 	#>
 Param([Parameter(Mandatory=$True)][string]$Computername,
-	[Parameter(Mandatory=$True)][string]$base,
+	[Parameter(Mandatory=$True)][string]$basedir,
 	[Parameter(Mandatory=$True)][string]$userinfo,
 	[Parameter(Mandatory=$True)][string]$userdir)
 
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
+	
 	write-log "Creating SystemInfo.txt" -fore yellow
-	$sinfo = import-csv ($base + $computername + '~systeminfo.csv') | where-object {$_.hivepath -notlike "*regback*" -and $_.keypath -notlike '*ControlSet002*'}
+	$sinfo = import-csv ($basedir + $computername + '~systeminfo.csv') | where-object {$_.hivepath -notlike "*regback*" -and $_.keypath -notlike '*ControlSet002*'}
 	$uinfo = import-csv ($userinfo + $computername + '~useractivity.csv')
 	$sinfo | where-object {$_.description -eq 'Session Manager Environment' -and $_.keypath -like '*controlset001*' -and $_.hivepath -notlike '*regback*'} | select-object @{Name="Source";Expression={'System'}},@{Name="Variable";Expression={$_.ValueName}},@{Name="Value";Expression={$_.ValueData}} | export-csv -notype ($computername + '~EnvironmentVariable.csv')
 	$u = $uinfo  | where-object {$_.description -eq 'Environment'}
@@ -238,10 +250,15 @@ function get-auditinfo {
 		Date: 8/24/2021
 	#>
 	Param([Parameter(Mandatory=$True)][string]$Computer,
-	[Parameter(Mandatory=$True)][string]$dir)
+	[Parameter(Mandatory=$True)][string]$basedir)
 	
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
 	write-log "Creating AuditInfo.txt" -fore green
-	$audit = import-csv ($dir + $computer + '~audit.csv')
+	$audit = import-csv ($basedir + $computer + '~audit.csv')
 	$outfile = ($computer + '~auditinfo.txt')
 	$out = 'SMB Settings'
 	$out | out-file $outfile

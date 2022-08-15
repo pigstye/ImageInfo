@@ -42,7 +42,7 @@ $bits = $scriptdir + '\BitsParser\BitsParser.exe'
 
 
 ##----------------
-$debug = $false
+$debug = $true
 ##----------------
 
 function update-systemstatuslog {

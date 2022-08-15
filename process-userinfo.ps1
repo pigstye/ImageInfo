@@ -146,7 +146,7 @@ foreach ($user in $users) {
 
 	$Startup = '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\'
 	if (Get-ChildItem ($userdir + $user + $startup)) {
-		write-peristence "Check User Startup directory for $user."
+		write-IOC "Check User Startup directory for $user."
 	}
 }
 

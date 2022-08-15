@@ -54,6 +54,12 @@ function import-iislogs {
 	V1.1 - Added logic to ignore multiple field lines
 #>
 	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$Logfile)
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
+	
 	$f = get-childitem $logfile
 	$tmp = ((Select-String '#Fields:' $f.fullname).line).Substring(9)
 	if ($tmp.length -gt 10) {$tmp > tmp.csv} else {$tmp[0] > tmp.csv}
