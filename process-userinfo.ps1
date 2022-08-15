@@ -70,6 +70,11 @@ $userName > UserNames.txt
 write-log 'Processing Each User'
 
 foreach ($user in $users) {
+	trap {
+		"###+++###" | Write-Debug
+		$error[0] | write-debug
+		($PSItem.InvocationInfo).positionmessage | write-debug
+	}
 	Write-Debug "User $user being processed"
 	write-log "Getting $user Jump Lists"
 	$jl = $userdir + $user + '\Appdata\Roaming\Microsoft\Windows\Recent'
