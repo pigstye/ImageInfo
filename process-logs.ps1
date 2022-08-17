@@ -363,7 +363,7 @@ function get-nonlocalip {
 	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True)][string]$filename)
 
 	process {
-		Select-String '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' -allmatches $filename | Select-String -notmatch '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}'| ForEach-Object{$_.matches.value} | ForEach-Object{$filename + ':' + $_} | select -unique
+		Select-String '(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' -allmatches $filename | Select-String -notmatch '10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.1[6-9]\.\d{1,3}\.\d{1,3}|172\.2[0-9]\.\d{1,3}\.\d{1,3}|172\.3[0-1]\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3}'| ForEach-Object{$_.matches.value} | ForEach-Object{$filename + ':' + $_} | Select-Object -unique
 	}
 }
 
@@ -386,6 +386,7 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		($PSItem.InvocationInfo).positionmessage | write-debug
 	}
 
+	Write-Debug "Looking for Common Vulnerabilites"
 	$system = import-csv ($csvdir + ($computername + '~system.csv'))
 	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
 	if ($stnum -gt 0) {
@@ -420,6 +421,89 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	$t = import-csv ($csvdir + ($computername + '~Windows PowerShell.csv'))
 	if ($t | Where-Object {$_.event -like '*DisableRealtimeMonitoring*'}) {
 		write-ioc "Check for Defender set to DisableRealtimeMonitoring"
+	}
+	if ($t | Where-Object {$_.event -like '*DSInternals*'}) {
+		write-ioc "Check for DSInternals usage."
+	}
+	$ns = (import-csv .($csvdir + ($computername + '~System.csv'))) | Where-Object {$_.Eventid -eq '7045'}
+	if (($ns | Where-Object {$_.event -like '*screenconnect*'}).length -gt 0) {
+		write-ioc "Check ScreenConnect usage"
+	}
+	if (($ns | Where-Object {$_.event -like '*New-Object System.IO.StreamReader*'}).length -gt 0) {
+		write-ioc "Check for Cobalt Strike PowerShell Service"
+	}
+	if (($ns | Where-Object {$_.event -like '*JABzAD0ATgBlAHcALQBP*'}).length -gt 0) {
+		write-ioc "Check for Cobalt Strike PowerShell Service"
+	}
+	if (($ns | Where-Object {$_.event -like "*remoting_host*"}).length -gt 0) {
+		write-ioc "Check for Remoting_host (Google Desktop) usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*bomgar*"}).length -gt 0) {
+		write-ioc "Check for Bomgar usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*logmein*"}).length -gt 0) {
+		write-ioc "Check for Logmein usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*LMI_Rescue*"}).length -gt 0) {
+		write-ioc "Check for Logmein Rescue usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*LMIIgnition*"}).length -gt 0) {
+		write-ioc "Check for Logmein Ignition usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*CloudRAService*"}).length -gt 0) {
+		write-ioc "Check for Cloud RA Service (Cloudberry) usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*TNIAUDITSERVICE*"}).length -gt 0) {
+		write-ioc "Check for Total Network Inventory usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*teamviewer*"}).length -gt 0) {
+		write-ioc "Check for TeamViewer usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*RemotePC*"}).length -gt 0) {
+		write-ioc "Check for RemotePC usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*gotomypc*"}).length -gt 0) {
+		write-ioc "Check for GotoMyPC usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*Anyplace*"}).length -gt 0) {
+		write-ioc "Check for Anyplace usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*showmypc*"}).length -gt 0) {
+		write-ioc "Check for ShowMyPC usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*Splashtop*"}).length -gt 0) {
+		write-ioc "Check for SplashTop usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*radmin*"}).length -gt 0) {
+		write-ioc "Check for RAdmin usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*joinme*"}).length -gt 0) {
+		write-ioc "Check for Joinme usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*anymeeting*"}).length -gt 0) {
+		write-ioc "Check for AnyMeeting usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*discord*"}).length -gt 0) {
+		write-ioc "Check for Discord usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*anydesk*"}).length -gt 0) {
+		write-ioc "Check for AnyDesk usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*mingleview*"}).length -gt 0) {
+		write-ioc "Check for MingleView usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*vnc*"}).length -gt 0) {
+		write-ioc "Check for VNC usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*Zoho Assist*"}).length -gt 0) {
+		write-ioc "Check for Zoho Assist usage"
+	}
+	if (($ns | Where-Object {$_.event -like "*psexec*"}).length -gt 0) {
+		write-ioc "Check for PSEXEC usage"
+	}
+	$wmil = import-csv ($csvdir + $computername + '~WMI-Activity%4Operational.csv')
+	if ($wmil | Where-Object {$_.event -like '*Win32_ShadowCopy*'}) {
+		write-ioc "Look for WMI event deleting Shadow Copies"
 	}
 }
 

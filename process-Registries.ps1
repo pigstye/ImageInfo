@@ -848,6 +848,23 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 
 import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace 'ROOT\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
 
+$usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
+if ($usa | Where-Object {$_.ProgramName -like '*mimikatz*'}) {
+	write-ioc "Check for mimikatz usage"
+}
+if ($usa | Where-Object {$_.ProgramName -like '*CloudBerry*'}) {
+	write-ioc "Check for CloudBerry Remote Assist activity"
+}
+if ($usa | Where-Object {$_.ProgramName -like '*CloudBerry*'}) {
+	write-ioc "Check for CloudBerry Remote Assist activity"
+}
+if ($usa | Where-Object {$_.ProgramName -like '*gmer*.exe*'}) {
+	write-ioc "Check for gmer.exe activity"
+}
+if ($usa | Where-Object {$_.ProgramName -like '*anxinsec*.exe*'}) {
+	write-ioc "Check for *anxinsec.exe activity"
+}
+
 
 
 write-log 'Normalizing Data' -fore green
@@ -871,7 +888,7 @@ Normalize-Date ($computername + '~UserActivity_Taskband.csv') ''
 
 set-location $basedir
 
-$gpu = import-csv ($computername + '~SystemInfo.csv') | where {$_.KeyPath -like "ROOT\Microsoft\Windows\CurrentVersion\Group Policy\DataStore\S*\0" -and $_.valuename -eq 'szName'}
+$gpu = import-csv ($computername + '~SystemInfo.csv') | Where-Object {$_.KeyPath -like "ROOT\Microsoft\Windows\CurrentVersion\Group Policy\DataStore\S*\0" -and $_.valuename -eq 'szName'}
 
 $out = ($computername + '-GroupPolicyUsers.txt')
 "Group Policy Users" | add-content $out

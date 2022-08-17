@@ -225,6 +225,17 @@ write-log "Getting Browser History"
 $outfile = $computername + '~browserhistory.csv'
 Write-Debug "Executing command: $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)"
 & $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)  | write-debug
+$brh = import-csv $outfile
+if ($brh | where-object{$_.url -like "*ngrok*"}){
+	write-ioc "Check for NGROK usage."
+}
+if ($brh | where-object{$_.url -like "*pCloud*"}){
+	write-ioc "Check for pCloud usage."
+}
+if ($brh | where-object{$_.url -like "*mega.nz*"}){
+	write-ioc "Check for uploads to Mega.nz."
+}
+
 
 write-log "Getting Application Crash Info"
 $outfile = $computername + '~AppCrash.txt'
@@ -243,6 +254,9 @@ if ($st | Where-Object {$_.Actions -like '*.ps1*'}) {
 }
 if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
 	write-ioc "Check for Scheduled Task running a Visual Basic (.vbs)"
+}
+if ($st | Where-Object {$_.Actions -like '*plink*'}) {
+	write-ioc "Check for Scheduled Task running plink"
 }
 $stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge [datetime]::parse($imagedate).adddays(-30)}).length
 if ($stnum -gt 0) {
@@ -311,7 +325,7 @@ if (test-path ($windir + 'system32\wbem\repository\fs\objects.data')) {
 import-csv ($computername + '~wmi.csv') -delim "`t" | export-csv -notype tmp.csv
 remove-item ($computername + '~wmi.csv')
 move-item tmp.csv ($computername + '~wmi.csv')
-## Check for possible persistence
+## Check for possible issuss
 if (Get-ChildItem ($Computername + '~wmi.txt') | Where-Object length -gt 1670) {
 	write-ioc "Check $Computername~wmi.txt"
 }
