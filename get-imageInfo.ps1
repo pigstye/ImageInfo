@@ -184,6 +184,14 @@ Write-Log 'Exporting MFT'
 & $mft -f ($drive + ':\$MFT') --csv $basedir --csvf ($computername + '~mft.csv')
 Normalize-Date ($computername + '~mft.csv') 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
+$mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {$_.LastModified0x10 -gt $imagedate}
+if ($mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
+	write-ioc "Check the executables in the root of c:\ProgramData"
+}
+if ($mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
+	write-ioc "Check the executables in c:\Users\Public\"
+}
+
 get-childitem * | where-object { $_.length -eq 0} | remove-item
 
 write-host "Compressing files to create zip for easy import into Splunk"

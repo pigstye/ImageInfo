@@ -72,7 +72,6 @@ function write-log {
 	write-debug ($dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg)
 }
 
-
 function write-Hostlog {
 	<#
 		.Synopsis

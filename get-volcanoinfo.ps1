@@ -170,6 +170,13 @@ if (test-path $mftfile) {
 	$outfile = $computername + '-mft.csv'
 	Write-Debug "Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
 	& $mft -f $mftfile --csv '.' --csvf $outfile  > logfile.txt
+	$mftinfo = import-csv $outfile | Where-Object {$_.LastModified0x10 -gt $imagedate}
+	if ($mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
+		write-ioc "Check the executables in the root of c:\ProgramData"
+	}
+	if ($mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
+		write-ioc "Check the executables in c:\Users\Public\"
+	}
 }
 
 $script = $scriptdir + '\process-userinfo.ps1'
