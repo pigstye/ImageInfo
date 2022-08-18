@@ -11,6 +11,36 @@ Keys:
         Recursive: True
         Comment: 0 key Under Each User SID contains username domain 
     -
+        Description: WER Hangs Debugger
+        HiveType: Software
+        Category: Autoruns
+        KeyPath: Microsoft\Windows\Windows Error Reporting\Hangs\*
+        Recursive: True
+        Comment: 
+    -
+        Description: WinLogon Key
+        HiveType: Software
+        Category: Autoruns
+        KeyPath: Microsoft\Windows NT\CurrentVersion\WinLogon
+        Recursive: True
+        Comment: 
+    -
+        Description: AeDebug Key
+        HiveType: Software
+        Category: Autoruns
+        KeyPath: Microsoft\Windows NT\CurrentVersion\AeDebug\
+        ValueName: Debugger
+        Recursive: False
+        Comment: 
+    -
+        Description: Command Processor Autorun Key
+        HiveType: Software
+        Category: Autoruns
+        KeyPath: Microsoft\Command Processor\
+        ValueName: AutoRun
+        Recursive: False
+        Comment: 
+    -
         Description: IsCloudDomainJoined
         HiveType: Amcache
         Category: System Info

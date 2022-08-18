@@ -873,6 +873,27 @@ if ($si | Where-Object {$_.keypath -like '*Image File Execution Options*' -and $
 if ($si | where-object {($_.keypath -eq 'ROOT\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
 	write-ioc "Check System Run keys"
 }
+if ($sinfo | where-object {$_.keypath -like '*ROOT\Microsoft\Windows NT\CurrentVersion\AeDebug'}){
+	write-ioc "Found AeDebug entries under HKLM\Software\Microsoft\Windows NT\CurrentVersion\AeDebug that should be investigatied"
+}
+if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows\Windows Error Reporting\Hangs' -and ($_.ValueName -eq 'Debugger' -or $_.ValueName -eq 'ReflectDebugger')}) {
+	write-ioc "Check WER Debugger entry HKLM\Software\Microsoft\Windows\Windows Error Reporting\Hangs"
+}
+if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Command Processor' -and $_.ValueName -eq 'AutoRun'}) {
+	write-ioc "Check Command Processor Autorun key HKLM\Software\Microsoft\Command Processor "
+}
+if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\Windows' -and $_.Valuename -eq 'Load'}){
+	write-ioc "Check Windows Load Key HKLM\Software\Microsoft\Windows NT\CurrentVersion\Windows"
+}
+if (($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'UserInit'}).ValueData -ne 'C:\Windows\system32\userinit.exe,') {
+	write-ioc "Check Winlogon Userinit property - It is not standard"
+}
+if (($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'Shell'}).ValueData -ne 'explorer.exe') {
+	write-ioc "Check Winlogon Shell property - It is not standard"
+}
+if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'mpnotify'}) {
+	write-ioc "Check Winlogon MPnotify property - It is not standard"
+}
 
 $uinfo = import-csv ($userinfo + $computername + '~useractivity.csv')
 if ($uinfo | where-object {($_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
