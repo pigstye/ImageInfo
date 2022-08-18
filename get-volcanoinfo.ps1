@@ -144,8 +144,9 @@ $host.ui.RawUI.WindowTitle="Processing Volcano output for $computername"
 $logdir = $basedir + 'c\windows\system32\winevt\logs\'
 $script = $scriptdir + '\process-logs.ps1'
 
+[datetime]::parse((get-date)).tostring('yyyy-MM-dd HH:mm:ss') | set-content ($basedir + 'ImageDate.txt')
 $s = (get-childitem $logdir).lastwritetime
-($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
+($s | sort-object)[$s.length-1] | set-content ($basedir + 'ImageDate.txt')
 $imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"

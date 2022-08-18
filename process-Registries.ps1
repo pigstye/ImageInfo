@@ -895,6 +895,20 @@ if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVe
 	write-ioc "Check Winlogon MPnotify property - It is not standard"
 }
 
+$svcinfo = import-csv ($basedir + $computername + '~Services.csv')
+if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -like '*tmp*'}){
+	write-ioc "Check Service running from tempory path"
+}
+if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -like '*temp*'}){
+	write-ioc "Check Service running from tempory path"
+}
+if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -like '*appdata*'}) {
+	write-ioc "Check service running from Users APPDATA"
+}
+if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -like '*\users\*'}) {
+	write-ioc "Check service running from User Directory"
+}
+
 $uinfo = import-csv ($userinfo + $computername + '~useractivity.csv')
 if ($uinfo | where-object {($_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
 	write-ioc "Check User Run Keys"
