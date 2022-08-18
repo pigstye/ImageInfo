@@ -130,7 +130,7 @@ copy-item $evtlogs $logdir
 
 $s = (get-childitem $logdir).lastwritetime
 ($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
-$imagedate = ($s | sort-object)[$s.length-1]
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 $script = $scriptdir + '\process-logs.ps1'
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"

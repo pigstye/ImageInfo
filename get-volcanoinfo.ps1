@@ -146,7 +146,7 @@ $script = $scriptdir + '\process-logs.ps1'
 
 $s = (get-childitem $logdir).lastwritetime
 ($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
-$imagedate = ($s | sort-object)[$s.length-1]
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
 start-process "$pshome\powershell.exe" -argumentlist $arg

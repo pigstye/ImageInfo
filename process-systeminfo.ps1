@@ -193,7 +193,7 @@ if ($debug) {
 $basedir = get-path $basedir
 $windir = get-path $windir
 $drive = (get-item $windir).parent.name[0]
-$imagedate = get-content ($basedir + 'ImageDate.txt')
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 push-location $basedir
 
@@ -258,7 +258,7 @@ if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
 if ($st | Where-Object {$_.Actions -like '*plink*'}) {
 	write-ioc "Check for Scheduled Task running plink"
 }
-$stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+$stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge $imagedate}).length
 if ($stnum -gt 0) {
 	write-ioc "$stnum New Scheduled tasks in last 30 days."
 }

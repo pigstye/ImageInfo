@@ -28,6 +28,8 @@
 
 . ($psscriptroot + '.\process-lib.ps1')
 
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 function get-eventlogs {
 <#
 
@@ -388,7 +390,7 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 
 	Write-Debug "Looking for Common Vulnerabilites"
 	$system = import-csv ($csvdir + ($computername + '~system.csv'))
-	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge $imagedate}).length
 	if ($stnum -gt 0) {
 		write-ioc "$stnum New Services created in last 30 days"
 	}
@@ -396,15 +398,15 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	if ($stnum -gt 0) {
 		write-ioc "$stnum New Services created running PowerShell command."
 	}
-	$stnum = ($system | where-object {$_.eventid -eq 4720 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+	$stnum = ($system | where-object {$_.eventid -eq 4720 -and [datetime]::parse($_.datetime) -ge $imagedate}).length
 	if ($stnum -gt 0) {
 		write-ioc "$stnum New Users created in last 30 days"
 	}
-	$stnum = ($system | where-object {($_.eventid -eq 4738 -or $_.eventid -eq 4735) -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30)}).length
+	$stnum = ($system | where-object {($_.eventid -eq 4738 -or $_.eventid -eq 4735) -and [datetime]::parse($_.datetime) -ge $imagedate}).length
 	if ($stnum -gt 0) {
 		write-ioc "$stnum User or Group changes in last 30 days"
 	}
-	$stnum = ($system | where-object {$_.eventid -eq 4688 -and [datetime]::parse($_.datetime) -ge [datetime]::parse($imagedate).adddays(-30) -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*' -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or $_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')}).length
+	$stnum = ($system | where-object {$_.eventid -eq 4688 -and [datetime]::parse($_.datetime) -ge $imagedate -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*' -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or $_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')}).length
 	if ($stnum -gt 0) {
 		write-ioc "$stnum lolbins used in last 30 days"
 	}

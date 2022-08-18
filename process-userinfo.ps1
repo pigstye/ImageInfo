@@ -50,7 +50,7 @@ if ($debug) {
 }
 
 $basedir = get-path $basedir
-$imagedate = get-content ($basedir + 'ImageDate.txt')
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 push-location $basedir
 

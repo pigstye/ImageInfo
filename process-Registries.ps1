@@ -788,7 +788,7 @@ $systemdir = get-path $systemdir
 
 $userdir = get-path $userdir
 
-$imagedate = get-content ($basedir + 'ImageDate.txt')
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 write-log "Processing System Registries for $computername" -fore yellow
 Write-Debug "Processing SystemInfo with systeminfo.reb"
@@ -848,6 +848,7 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 
 import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace 'ROOT\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
 
+write-debug "Checking for common IOCs"
 $usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
 if ($usa | Where-Object {$_.ProgramName -like '*mimikatz*'}) {
 	write-ioc "Check for mimikatz usage"
@@ -863,6 +864,19 @@ if ($usa | Where-Object {$_.ProgramName -like '*gmer*.exe*'}) {
 }
 if ($usa | Where-Object {$_.ProgramName -like '*anxinsec*.exe*'}) {
 	write-ioc "Check for *anxinsec.exe activity"
+}
+
+$sinfo = import-csv ($basedir + $computername + '~SystemInfo.csv')
+if ($si | Where-Object {$_.keypath -like '*Image File Execution Options*' -and $_.ValueName -eq 'Debugger'}) {
+	write-ioc "Check for Debugger Key on Image File Execution Options"
+}
+if ($si | where-object {($_.keypath -eq 'ROOT\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
+	write-ioc "Check System Run keys"
+}
+
+$uinfo = import-csv ($userinfo + $computername + '~useractivity.csv')
+if ($uinfo | where-object {($_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
+	write-ioc "Check User Run Keys"
 }
 
 
