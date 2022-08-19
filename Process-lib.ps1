@@ -114,10 +114,13 @@ function get-path {
 
 function write-debug {
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
+	
 	if ($debug) {
-		$dte = Get-Date
-		write-host -ForegroundColor Yellow $msg
-		$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content ($basedir + 'debuglog.txt')
+		if ($msg -ne ''){
+			$dte = Get-Date
+			write-host -ForegroundColor Yellow $msg
+			$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content ($basedir + 'debuglog.txt')
+		}
 	}
 }
 
@@ -147,7 +150,7 @@ function Normalize-Date {
 .Parameter csvfile
 	csv file to modify
 .Parameter datefield
-	field containt the date
+	field containing the date
 .Parameter fields
 	lits of fields in file comma seperated
 .NOTES
@@ -165,12 +168,7 @@ Param([Parameter(Mandatory=$True)][string]$csvfile,
 		$eap = $erroractionpreference
 		$erroractionpreference = "SilentlyContinue"
 		if ($datefields.length -gt 0) {
-			$flds = $fields -split ','
-			$f = @()
-			$f += $flds[0]
-			$f += 'EntryID'
-			$f += $flds[1..($flds.length)]
-			$s | ForEach-Object{foreach($datefield in ($dateFields -split ',')) {$_.$dateField = [datetime]::parse($_.$dateField).tostring('yyyy-MM-dd HH:mm:ss.fffffff')}}
+			$s | ForEach-object{foreach($datefield in ($dateFields -split ',')) {$_.$dateField = [datetime]::parse($_.$dateField).tostring('yyyy-MM-dd HH:mm:ss.fffffff')}}
 		}
 		$flds = get-content $csvfile -head 1
 		$flds = $flds -replace '"',''

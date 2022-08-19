@@ -79,7 +79,7 @@ foreach ($user in $users) {
 	write-log "Getting $user Jump Lists"
 	$jl = $userdir + $user + '\Appdata\Roaming\Microsoft\Windows\Recent'
 	$fle = $computername + '~RecentFiles_' + $user + '.csv'
-	Write-Debug "Executing command: $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q"
+	Write-Debug "Executing command: $jleCmd -d $jl --all --fd --csv '.' --csvf $fle -q"
 	& $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q  | write-debug
 
 	$chromeCache = $userdir + $user + '\AppData\Local\Google\Chrome\User Data\Default\Cache'

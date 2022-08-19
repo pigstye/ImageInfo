@@ -306,7 +306,7 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 
 $polfile = $scriptdir + '\parse-polfile.ps1'
 . $polfile
-write-log "Local Group Policy saved to " ($computername + "~LocalGroupPolicy.txt")
+write-log "Local Group Policy saved to " + ($computername + "~LocalGroupPolicy.txt")
 get-childitem ($windir + 'system32\grouppolicy\*.pol') -recurse | foreach-object{parse-polfile $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 get-childitem ($windir + 'system32\grouppolicy\*.xml') -recurse | foreach-object{get-content $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 
@@ -684,7 +684,7 @@ Normalize-Date ($computername + '~AppCompatCache.csv')	'LastModifiedTimeUTC'
 Normalize-Date ($computername + '~AmCache.csv') 'KeyLastWriteTimestamp'
 Normalize-Date ($computername + '~AmCache_DevicePnps.csv') 'KeyLastWriteTimestamp,DriverVerDate'
 Normalize-Date ($computername + '~AmCache_DriveBinaries.csv') 'KeyLastWriteTimestamp,DriverTimeStamp,DriverLastWriteTime'
-Normalize-Date ($computername + '~AmCache_DriverPackages.csv') 'KeyLastWriteTimestamp'
+Normalize-Date ($computername + '~AmCache_DriverPackages.csv') 'Date'
 Normalize-Date ($computername + '~AmCache_ShortCuts.csv') 'KeyLastWriteTimestamp'
 Normalize-Date ($computername + '~AmCache_UnassociatedFileEntries.csv') 'LinkDate,FileKeyLastWriteTimestamp'
 Normalize-Date ($computername + '~AmCache_DeviceContainers.csv') 'KeyLastWriteTimestamp'
