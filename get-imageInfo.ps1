@@ -131,9 +131,13 @@ copy-item $evtlogs $logdir
 $s = (get-childitem $logdir).lastwritetime
 ($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
 $imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
-
 $script = $scriptdir + '\process-logs.ps1'
-$arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
+if ($debug) {
+	$arg = '-noexit '
+} else {
+	$arg = ''
+}
+$arg += "-noprofile -command $script '$computername' '$basedir' '$logdir'"
 Write-Debug $arg
 start-process "$pshome\powershell.exe" -argumentlist $arg
 write-log "Starting Log Analysis"
@@ -144,7 +148,12 @@ if (test-path ($drive + ':\inetpub')) {
 	$inetpub = $drive + ':\inetpub\'
 	$httperr = $windir + 'System32\LogFiles\'
 	$iisLogDir = get-path 'IISLogs'
-	$arg = "-noprofile -command $script '$computername' '$basedir' '$inetpub' '$httperr' '$iisLogDir'"
+	if ($debug) {
+		$arg = '-noexit '
+	} else {
+		$arg = ''
+	}
+	$arg += "-noprofile -command $script '$computername' '$basedir' '$inetpub' '$httperr' '$iisLogDir'"
 	Write-Debug $arg
 	start-process "$pshome\powershell.exe" -argumentlist $arg
 	write-log "Starting IIS Log Analysis"
@@ -185,11 +194,17 @@ Write-Log 'Exporting MFT'
 Normalize-Date ($computername + '~mft.csv') 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
 $mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {$_.LastModified0x10 -gt $imagedate}
-if ($mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
-	write-ioc "Check the executables in the root of c:\ProgramData"
+$poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')})
+if ($poc.length -gt 0) {
+		write-ioc "Check the executables in the root of c:\ProgramData"
+		write-ioc '      Filename   -   Parent   -   Created0x10   -   LastModified0x10   -   LastAccess0x10'
+		$poc | foreach-object{"    " + $_.Filename + ' - ' + $_.parent + ' - ' + $_.Created0x10 + ' - ' + $_.LastModified0x10 + ' - ' + $_.LastAccess0x10 | write-ioc} 
 }
+$poc = $mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 if ($mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
-	write-ioc "Check the executables in c:\Users\Public\"
+		write-ioc "Check the executables in c:\Users\Public\"
+		write-ioc '      Filename   -   Parent   -   Created0x10   -   LastModified0x10   -   LastAccess0x10'
+		$poc | ForEach-Object{"    " + $_.Filename + ' - ' + $_.parent + ' - ' + $_.Created0x10 + ' - ' + $_.LastModified0x10 + ' - ' + $_.LastAccess0x10 | write-ioc} 
 }
 
 get-childitem * | where-object { $_.length -eq 0} | remove-item

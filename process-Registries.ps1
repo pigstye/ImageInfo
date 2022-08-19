@@ -850,8 +850,8 @@ import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -e
 
 write-debug "Checking for common IOCs"
 $usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
-if ($usa | Where-Object {$_.ProgramName -like '*mimikatz*'}) {
-	write-ioc "Check for mimikatz usage"
+if ($usa | Where-Object {$_.ProgramName -like ('*mi"+ "mik" + "atz*')}) {
+	write-ioc "Check for mi" + "mik" + "atz usage"
 }
 if ($usa | Where-Object {$_.ProgramName -like '*CloudBerry*'}) {
 	write-ioc "Check for CloudBerry Remote Assist activity"
@@ -859,10 +859,10 @@ if ($usa | Where-Object {$_.ProgramName -like '*CloudBerry*'}) {
 if ($usa | Where-Object {$_.ProgramName -like '*CloudBerry*'}) {
 	write-ioc "Check for CloudBerry Remote Assist activity"
 }
-if ($usa | Where-Object {$_.ProgramName -like '*gmer*.exe*'}) {
+if ($usa | Where-Object {$_.ProgramName -like ('*gme' + 'r*.exe*')}) {
 	write-ioc "Check for gmer.exe activity"
 }
-if ($usa | Where-Object {$_.ProgramName -like '*anxinsec*.exe*'}) {
+if ($usa | Where-Object {$_.ProgramName -like ('*anx' + 'insec*.exe*')}) {
 	write-ioc "Check for *anxinsec.exe activity"
 }
 

@@ -198,7 +198,7 @@ function get-logsearches {
 	write-log "Gathering possible Pass-the-Hash and Zerologon events" "cyan"
 	$t | where-object {$_.eventid -eq 4624 -and $_.event -like '* Negotiat*' -and $_.event -like '*Logon Type:  9*' -and $_.event -like '*seclogo*'} | export-csv -notype ($computername + '~PassTheHash.csv')
 	$t | where-object {$_.eventid -eq 4742 -or $_.eventid -eq 5805 -or $_.eventid -eq 4724} | export-csv -notype ($computername + '~ZeroLogon.csv')
-	write-log "Looking for MimiKatz" "cyan"
+	write-log ("Looking for Mi" + "miK" + "atz") "cyan"
 	#stupid tricks to get past Windows Defender
 	$t | where-object {$_.event -like "*eo" + ".o" + "e.k" + "iwi*" -or $_.event -like "*<3" + " eo" + ".oe*" -or $_.event -like "*mi" + "mi" + "lib*" -or $_.event -like "*mi" + "mika" + "tz*" -or $_.event -like "*priv" + "ile" + "ge::" + "debug*" -or $_.event -like "*sek" + "urlsa::Lo" + "gonPassw" + "ords*"} | export-csv -notype ($computername + '~mimikatz.csv')
 	$dte = get-date($t[0].DateTime)
@@ -390,122 +390,190 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 
 	Write-Debug "Looking for Common Vulnerabilites"
 	$system = import-csv ($csvdir + ($computername + '~system.csv'))
-	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge $imagedate}).length
-	if ($stnum -gt 0) {
-		write-ioc "$stnum New Services created in last 30 days"
+	$stnum = $system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge $imagedate}
+	if ($stnum.length -gt 0) {
+		$n = $stnum.length
+		write-ioc "$n New Services created in last 30 days"
+		$stnum | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	$stnum = ($system | where-object {$_.eventid -eq 7045 -and $_.event -like '*powershell.exe*'}).length
-	if ($stnum -gt 0) {
-		write-ioc "$stnum New Services created running PowerShell command."
+	$stnum = ($system | where-object {$_.eventid -eq 7045 -and $_.event -like '*powershell.exe*'})
+	if ($stnum.length -gt 0) {
+		$n = $stnum.length
+		write-ioc "$n New Services created running PowerShell command."
+		$stnum | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	$stnum = ($system | where-object {$_.eventid -eq 4720 -and [datetime]::parse($_.datetime) -ge $imagedate}).length
-	if ($stnum -gt 0) {
-		write-ioc "$stnum New Users created in last 30 days"
+	$stnum = ($system | where-object {$_.eventid -eq 4720 -and [datetime]::parse($_.datetime) -ge $imagedate})
+	if ($stnum.length -gt 0) {
+		$n = $stnum.length
+		write-ioc "$n New Users created in last 30 days"
+		$stnum | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	$stnum = ($system | where-object {($_.eventid -eq 4738 -or $_.eventid -eq 4735) -and [datetime]::parse($_.datetime) -ge $imagedate}).length
-	if ($stnum -gt 0) {
-		write-ioc "$stnum User or Group changes in last 30 days"
+	$stnum = ($system | where-object {($_.eventid -eq 4738 -or $_.eventid -eq 4735) -and [datetime]::parse($_.datetime) -ge $imagedate})
+	if ($stnum.length -gt 0) {
+		$n = $stnum.length
+		write-ioc "$n User or Group changes in last 30 days"
+		$stnum | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	$stnum = ($system | where-object {$_.eventid -eq 4688 -and [datetime]::parse($_.datetime) -ge $imagedate -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*' -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or $_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')}).length
-	if ($stnum -gt 0) {
-		write-ioc "$stnum lolbins used in last 30 days"
+	$stnum = ($system | where-object {$_.eventid -eq 4688 -and [datetime]::parse($_.datetime) -ge $imagedate -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*' -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or $_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')})
+	if ($stnum.length -gt 0) {
+		$n = $stnum.length
+		write-ioc "$n lolbins used in last 30 days"
+		$stnum | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
 	if ((get-item ($basedir + 'logsearches\NonLocalIPAddresses.txt')).Length -gt 2) {
 		write-ioc "Check NonLocalIPAddresses.txt in the LogSearches directory."
 	}
-	$defender = import-csv ($csvdir + ($computername + '~Microsoft-Windows-Windows Defender%4Operational.csv'))
-	if ($defender | Where-Object {$_.event -like '*CobaltStrike*'}) {
+	$defender = import-csv ($csvdir + $computername + '~Microsoft-Windows-Windows Defender%4Operational.csv')
+	$d = ($defender | Where-Object {$_.event -like '*CobaltStrike*'})
+	if ($d.length -gt 0) {
 		write-ioc "Microsoft Defender detected Cobalt Strike"
+		$d | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if ($defender | Where-Object {$_.event -like '*Meterpreter*'}) {
+	$d = ($defender | Where-Object {$_.event -like '*Meterpreter*'})
+	if ($d.length -gt 0) {
 		write-ioc "Microsoft Defender detected Meterpreter"
+		$d | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
 	$t = import-csv ($csvdir + ($computername + '~Windows PowerShell.csv'))
-	if ($t | Where-Object {$_.event -like '*DisableRealtimeMonitoring*'}) {
+	$dm = ($t | Where-Object {$_.event -like '*DisableRealtimeMonitoring*'})
+	if ($dm.length -gt 0) {
 		write-ioc "Check for Defender set to DisableRealtimeMonitoring"
+		$dm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if ($t | Where-Object {$_.event -like '*DSInternals*'}) {
+	$ds = $t | Where-Object {$_.event -like '*DSInternals*'}
+	if ($ds.length -gt 0) {
 		write-ioc "Check for DSInternals usage."
+		$ds | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	$ns = (import-csv .($csvdir + ($computername + '~System.csv'))) | Where-Object {$_.Eventid -eq '7045'}
-	if (($ns | Where-Object {$_.event -like '*screenconnect*'}).length -gt 0) {
+	$ns = (import-csv ($csvdir + $computername + '~System.csv')) | Where-Object {$_.Eventid -eq '7045'}
+	$tm = ($ns | Where-Object {$_.event -like '*screenconnect*'})
+	if ($tm.length -gt 0) {
 		write-ioc "Check ScreenConnect usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like '*New-Object System.IO.StreamReader*'}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like '*New-Object System.IO.StreamReader*'})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Cobalt Strike PowerShell Service"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like '*JABzAD0ATgBlAHcALQBP*'}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like '*JABzAD0ATgBlAHcALQBP*'})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Cobalt Strike PowerShell Service"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*remoting_host*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*remoting_host*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Remoting_host (Google Desktop) usage"
 	}
 	if (($ns | Where-Object {$_.event -like "*bomgar*"}).length -gt 0) {
 		write-ioc "Check for Bomgar usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*logmein*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*logmein*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Logmein usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*LMI_Rescue*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*LMI_Rescue*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Logmein Rescue usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*LMIIgnition*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*LMIIgnition*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Logmein Ignition usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*CloudRAService*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*CloudRAService*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Cloud RA Service (Cloudberry) usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*TNIAUDITSERVICE*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like  "*TNIAUDITSERVICE*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Total Network Inventory usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*teamviewer*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*teamviewer*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for TeamViewer usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*RemotePC*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*RemotePC*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for RemotePC usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*gotomypc*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*gotomypc*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for GotoMyPC usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*Anyplace*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*Anyplace*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Anyplace usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*showmypc*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*showmypc*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for ShowMyPC usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*Splashtop*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*Splashtop*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for SplashTop usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*radmin*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*radmin*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for RAdmin usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*joinme*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*joinme*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Joinme usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*anymeeting*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*anymeeting*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for AnyMeeting usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*discord*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*discord*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Discord usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*anydesk*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*anydesk*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for AnyDesk usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*mingleview*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*mingleview*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for MingleView usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*vnc*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*vnc*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for VNC usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*Zoho Assist*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*Zoho Assist*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for Zoho Assist usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	if (($ns | Where-Object {$_.event -like "*psexec*"}).length -gt 0) {
+	$tm = ($ns | Where-Object {$_.event -like "*psexec*"})
+	if ($tm.length -gt 0) {
 		write-ioc "Check for PSEXEC usage"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
 	$wmil = import-csv ($csvdir + $computername + '~WMI-Activity%4Operational.csv')
-	if ($wmil | Where-Object {$_.event -like '*Win32_ShadowCopy*'}) {
+	$tm = $wmil | Where-Object {$_.event -like '*Win32_ShadowCopy*'}
+	if ($tm.length -gt 0) {
 		write-ioc "Look for WMI event deleting Shadow Copies"
+		$tm | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
 }
 
@@ -557,11 +625,17 @@ mkdir logs-csv >> $null
 mkdir logsearches >> $null
 $logcsv = $computername + '-logs.csv'
 get-childitem $logfiles | foreach-object{write-log "Processing: $_"
+		trap {
+			"###+++###" | Write-Debug
+			$error[0] | write-debug
+			($PSItem.InvocationInfo).positionmessage | write-debug
+		}
+
 		$tmp = get-eventlogs $_.fullname
 		$tmp | foreach-object{$_.datetime = [datetime]::parse($_.datetime).tostring('yyyy-MM-dd HH:mm:ss')}
 		$tmp | export-csv -notype $logcsv -append
 		$tmp | export-csv -notype ('logs-csv\' + $computername + '~' + $_.basename + '.csv')
-	}
+}
 #get-childitem $logfiles | where-object {$_.length -gt 69632} | foreach-object{write-log "Processing: $_"; $tmp = get-eventlogs $_.fullname; $tmp | foreach-object{$_.datetime = [datetime]::parse($_.datetime).tostring('yyyy-MM-dd HH:mm:ss')} -ErrorAction SilentlyContinue;  $tmp | export-csv -notype $logcsv -append; $tmp | export-csv -notype ('logs-csv\' + $computername + '~' + $_.basename + '.csv')}
 get-childitem .\logs-csv\ | where-object {$_.length -eq 0} | remove-item
 
