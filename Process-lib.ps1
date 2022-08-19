@@ -137,6 +137,7 @@ function write-ioc {
 	Date: 8/10/2022
 #>
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
+	add-content -path ($basedir + '_ThingsToCheck.txt') -value '=========+++++++++=============='
 	add-content -path ($basedir + '_ThingsToCheck.txt') -value $msg
 }
 

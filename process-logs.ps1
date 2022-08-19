@@ -434,7 +434,7 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		write-ioc "Microsoft Defender detected Meterpreter"
 		$d | foreach-object{'    ' + $_.DateTime + ' - ' + $_.Event | write-ioc }
 	}
-	$t = import-csv ($csvdir + ($computername + '~Windows PowerShell.csv'))
+	$t = import-csv ($csvdir + $computername + '~Windows PowerShell.csv')
 	$dm = ($t | Where-Object {$_.event -like '*DisableRealtimeMonitoring*'})
 	if ($dm.length -gt 0) {
 		write-ioc "Check for Defender set to DisableRealtimeMonitoring"
