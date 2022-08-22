@@ -432,84 +432,84 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	if ($t | Where-Object {$_.event -like '*DSInternals*'}) {
 		write-ioc "Check for DSInternals usage."
 	}
-	$ns = (import-csv .($csvdir + ($computername + '~System.csv'))) | Where-Object {$_.Eventid -eq '7045'}
-	if (($ns | Where-Object {$_.event -like '*screenconnect*'}).length -gt 0) {
+	$ns = (import-csv ($csvdir + ($computername + '~System.csv'))) | Where-Object {$_.Eventid -eq '7045'}
+	if ($ns | Where-Object {$_.event -like '*screenconnect*'}) {
 		write-ioc "Check ScreenConnect usage"
 	}
-	if (($ns | Where-Object {$_.event -like '*New-Object System.IO.StreamReader*'}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like '*New-Object System.IO.StreamReader*'}) {
 		write-ioc "Check for Cobalt Strike PowerShell Service"
 	}
-	if (($ns | Where-Object {$_.event -like '*JABzAD0ATgBlAHcALQBP*'}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like '*JABzAD0ATgBlAHcALQBP*'}) {
 		write-ioc "Check for Cobalt Strike PowerShell Service"
 	}
-	if (($ns | Where-Object {$_.event -like "*remoting_host*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*remoting_host*"}) {
 		write-ioc "Check for Remoting_host (Google Desktop) usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*bomgar*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*bomgar*"}) {
 		write-ioc "Check for Bomgar usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*logmein*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*logmein*"}) {
 		write-ioc "Check for Logmein usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*LMI_Rescue*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*LMI_Rescue*"}) {
 		write-ioc "Check for Logmein Rescue usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*LMIIgnition*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*LMIIgnition*"}) {
 		write-ioc "Check for Logmein Ignition usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*CloudRAService*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*CloudRAService*"}) {
 		write-ioc "Check for Cloud RA Service (Cloudberry) usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*TNIAUDITSERVICE*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*TNIAUDITSERVICE*"}) {
 		write-ioc "Check for Total Network Inventory usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*teamviewer*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*teamviewer*"}) {
 		write-ioc "Check for TeamViewer usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*RemotePC*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*RemotePC*"}) {
 		write-ioc "Check for RemotePC usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*gotomypc*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*gotomypc*"}) {
 		write-ioc "Check for GotoMyPC usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*Anyplace*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*Anyplace*"}) {
 		write-ioc "Check for Anyplace usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*showmypc*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*showmypc*"}) {
 		write-ioc "Check for ShowMyPC usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*Splashtop*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*Splashtop*"}) {
 		write-ioc "Check for SplashTop usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*radmin*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*radmin*"}) {
 		write-ioc "Check for RAdmin usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*joinme*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*joinme*"}) {
 		write-ioc "Check for Joinme usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*anymeeting*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*anymeeting*"}) {
 		write-ioc "Check for AnyMeeting usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*discord*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*discord*"}) {
 		write-ioc "Check for Discord usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*anydesk*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*anydesk*"}) {
 		write-ioc "Check for AnyDesk usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*mingleview*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*mingleview*"}) {
 		write-ioc "Check for MingleView usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*vnc*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*vnc*"}) {
 		write-ioc "Check for VNC usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*Zoho Assist*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*Zoho Assist*"}) {
 		write-ioc "Check for Zoho Assist usage"
 	}
-	if (($ns | Where-Object {$_.event -like "*psexec*"}).length -gt 0) {
+	if ($ns | Where-Object {$_.event -like "*psexec*"}) {
 		write-ioc "Check for PSEXEC usage"
 	}
-	$ns = (import-csv .($basedir + ($computername + '~Services.csv')))
-	if (($ns | Where-Object{$_.ValueData -like "*dameware*"}).length -gt 0) {
+	$ns = (import-csv ($basedir + ($computername + '~Services.csv')))
+	if ($ns | Where-Object{$_.ValueData -like "*dameware*"}) {
 		write-ioc "Check DameWare usage"
 	}
 	$wmil = import-csv ($csvdir + $computername + '~WMI-Activity%4Operational.csv')
