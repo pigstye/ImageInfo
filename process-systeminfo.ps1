@@ -337,35 +337,32 @@ If (Test-path ($drive + '\ProgramData\Microsoft\Network\Downloader\')) {
 }
 
 If (Test-path ($windir + 'System32\LogFiles\Sum\')) {
-	try {
-		[Console]::TreatControlCAsInput = $true
-		if ([Console]::KeyAvailable) {
-			$key = [Console]::ReadKey($true)
-			if ($key.key -eq "C" -and $key.modifiers -eq "Control") { 
-				[Console]::TreatControlCAsInput = $false
-				out-debug "Caught ^C while processing SUM Database"
-				break
-			}
-		}
-		write-log 'Processing Sum databases'
-		mkdir SumDatabase >> $null
-		set-location SumDatabase
-		copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
-		out-debug "Executing command: $srum .\SystemIdentity.mdb"
-		& $srum .\SystemIdentity.mdb | out-debug
-		mkdir Current >> $null
-		move-item current.mdb Current
-		set-location Current
-		out-debug "Executing command: $srum current.mdb"
-		& $srum current.mdb | out-debug
-		set-location ..
-		$l = import-csv .\CHAINED_DATABASES.csv
-		foreach ($r in $l) {mkdir $r.year  >> $null;move-item $r.filename $r.year}
-		foreach ($r in $l) {set-location $r.year;& $srum *.mdb | out-debug ;set-location ..}
-		get-childitem *.csv -recurse | foreach-object{push-location $_.directory;rename-item $_.name ($computername + '~' + $_.name);pop-location}
-	} finally {
+	write-log 'Processing Sum databases'
+	mkdir SumDatabase >> $null
+	set-location SumDatabase
+	copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
+	out-debug "Processing SystemIdentity.mdb"
+	& $nese /table SystemIdentity.mdb 'chained_databases' /SaveDirect /scomma ($computername + '-ChainedDatabases.csv') | out-debug 
+	& $nese /table SystemIdentity.mdb 'role_ids' /SaveDirect /scomma ($computername + '-RoleIDS.csv') | out-debug 
+	mkdir Current >> $null
+	move-item current.mdb Current
+	set-location Current
+	out-debug "Processing current.mdb"
+	& $nese /table current.mdb 'Clients' /SaveDirect /scomma ($computername + '-Clients.csv') | out-debug 
+	& $nese /table Current.mdb 'DNS' /SaveDirect /scomma ($computername + '-DNS.csv') | out-debug 
+	& $nese /table Current.mdb 'VIRTUALMACHINES' /SaveDirect /scomma ($computername + '-VIRTUALMACHINES.csv')| out-debug 
+	set-location ..
+	$l = import-csv ($computername + '-CHAINEDDATABASES.csv')
+	out-debug "Processing Chained Databases"
+	foreach($r in $l) {mkdir $r.year  >> $null;move-item $r.filename $r.year}
+	foreach($r in $l) {
+		set-location $r.year
+		& $nese /table $r.Filename 'Clients' /SaveDirect /scomma ($computername + '-Clients.csv') | out-debug 
+		& $nese /table $r.Filename 'DNS' /SaveDirect /scomma ($computername + '-DNS.csv') | out-debug 
+		& $nese /table $r.Filename 'VIRTUALMACHINES' /SaveDirect /scomma ($computername + '-VIRTUALMACHINES.csv') | out-debug 
 		set-location ..
 	}
+	set-location ..
 } else {
 	write-log 'Did not find SUM database'
 }

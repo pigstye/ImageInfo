@@ -39,7 +39,7 @@ $wtxcmd = $scriptdir + '\ericzimmerman\WxTCmd.exe'
 $recmd = $scriptdir + "\EricZimmerman\registryexplorer\recmd.exe" 
 $recmddir = $scriptdir + "\EricZimmerman\registryexplorer\"
 $bits = $scriptdir + '\BitsParser\BitsParser.exe'
-
+$nese = $ScriptDir + '\Nirsoft\esedatabaseview.exe'
 
 ##----------------
 $debug = $false

@@ -72,6 +72,8 @@ invoke-webrequest -Headers @{'Referer' = 'https://www.nirsoft.net/utils/chrome_c
 Expand-Archive -path ($nirsoftdir + 'chromecookiesview.zip') -DestinationPath $nirsoftdir -Force
 invoke-webrequest -Headers @{'Referer' = 'https://www.nirsoft.net/utils/edge_cookies_view.html'} -uri https://www.nirsoft.net/utils/edgecookiesview.zip -OutFile ($nirsoftdir + 'edgecookiesview.zip')
 Expand-Archive -path ($nirsoftdir + 'edgecookiesview.zip') -DestinationPath $nirsoftdir -Force
+Invoke-WebRequest -headers @{'Referer' = 'https://www.nirsoft.net/utils/ese_database_view.html'} -uri https://www.nirsoft.net/utils/esedatabaseview.zip -OutFile ($nirsoftdir + 'esedatabaseview.zip')
+Expand-Archive -path ($nirsoftdir + 'esedatabaseview.zip') -DestinationPath $nirsoftdir -Force
 Remove-Item ($nirsoftdir + '*.zip')
 
 write-host "Downloading ese2csv.exe from https://github.com/MarkBaggett/ese-analyst" -ForegroundColor Yellow
