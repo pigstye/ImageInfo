@@ -813,10 +813,15 @@ set-location ShellBags
 	& $sb -d ($userDir) --csv . | write-debug
 	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
 					move-item $_.name $csvfile
-					Normalize-Date $csvfile 'AccessedOn'
+					Normalize-Date $csvfile 'LastInteracted,FirstInteracted,LastWriteTime'
 				}
 	get-childitem * |foreach-object{$g = $_.name | select-string '(^.*?~).*?Users(_.*)';$t = $g.matches.groups[1].value + 'Shellbags' + $g.matches.groups[2].value;move-item $_.name $t}
 	get-childitem * | where-object length -eq 0 | remove-item
+	get-childitem *.csv | ForEach-Object{$sbs += import-csv $_ | Where-Object {[datetime]::parse($_.Lastinteracted) -ge $imagedate}}
+	if ($sbs) {
+		$sbs | export-csv -notype ($computername + '~RecentShellbags')
+		write-ioc ('Check ' + $computername + '~RecentShellbags' + ' for activity.')
+	}
 set-location ..
 
 set-location $userinfo
@@ -833,6 +838,7 @@ if (get-childitem *recentdocs.csv | where-object{import-csv $_ | where-object {$
 	write-ioc "ISO files have been opened - check *recentDocs.csv files"
 }
 
+
 set-location ..
 
 get-systeminfo $computername $basedir $userinfo $userdir
@@ -846,7 +852,7 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 	remove-item -recurse (".\" + $_.Name)
 }
 
-import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace 'ROOT\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
+import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace '*\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
 
 write-debug "Checking for common IOCs"
 $usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
@@ -867,31 +873,31 @@ if ($usa | Where-Object {$_.ProgramName -like ('*anx' + 'insec*.exe*')}) {
 }
 
 $sinfo = import-csv ($basedir + $computername + '~SystemInfo.csv')
-if ($si | Where-Object {$_.keypath -like '*Image File Execution Options*' -and $_.ValueName -eq 'Debugger'}) {
+if ($sinfo | Where-Object {$_.keypath -like '*Image File Execution Options*' -and $_.ValueName -eq 'Debugger'}) {
 	write-ioc "Check for Debugger Key on Image File Execution Options"
 }
-if ($si | where-object {($_.keypath -eq 'ROOT\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
+if ($sinfo | where-object {($_.keypath -eq '*\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq '*\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
 	write-ioc "Check System Run keys"
 }
-if ($sinfo | where-object {$_.keypath -like '*ROOT\Microsoft\Windows NT\CurrentVersion\AeDebug'}){
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows NT\CurrentVersion\AeDebug'}){
 	write-ioc "Found AeDebug entries under HKLM\Software\Microsoft\Windows NT\CurrentVersion\AeDebug that should be investigatied"
 }
-if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows\Windows Error Reporting\Hangs' -and ($_.ValueName -eq 'Debugger' -or $_.ValueName -eq 'ReflectDebugger')}) {
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows\Windows Error Reporting\Hangs' -and ($_.ValueName -eq 'Debugger' -or $_.ValueName -eq 'ReflectDebugger')}) {
 	write-ioc "Check WER Debugger entry HKLM\Software\Microsoft\Windows\Windows Error Reporting\Hangs"
 }
-if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Command Processor' -and $_.ValueName -eq 'AutoRun'}) {
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Command Processor' -and $_.ValueName -eq 'AutoRun'}) {
 	write-ioc "Check Command Processor Autorun key HKLM\Software\Microsoft\Command Processor "
 }
-if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\Windows' -and $_.Valuename -eq 'Load'}){
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows NT\CurrentVersion\Windows' -and $_.Valuename -eq 'Load'}){
 	write-ioc "Check Windows Load Key HKLM\Software\Microsoft\Windows NT\CurrentVersion\Windows"
 }
-if (($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'UserInit'}).ValueData -ne 'C:\Windows\system32\userinit.exe,') {
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'UserInit' -and $_.ValueData -ne 'C:\Windows\system32\userinit.exe,'}) {
 	write-ioc "Check Winlogon Userinit property - It is not standard"
 }
-if (($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'Shell'}).ValueData -ne 'explorer.exe') {
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'Shell' -and $_.ValueData -ne 'explorer.exe'}) {
 	write-ioc "Check Winlogon Shell property - It is not standard"
 }
-if ($sinfo | where-object {$_.keypath -like 'ROOT\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'mpnotify'}) {
+if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows NT\CurrentVersion\WinLogon' -and $_.Valuename -eq 'mpnotify'}) {
 	write-ioc "Check Winlogon MPnotify property - It is not standard"
 }
 
@@ -910,7 +916,7 @@ if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -lik
 }
 
 $uinfo = import-csv ($userinfo + $computername + '~useractivity.csv')
-if ($uinfo | where-object {($_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq 'ROOT\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
+if ($uinfo | where-object {($_.keypath -eq '*\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq '*\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
 	write-ioc "Check User Run Keys"
 }
 

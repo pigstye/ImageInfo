@@ -147,14 +147,24 @@ foreach ($user in $users) {
 		write-log "Getting $user PowerShell Log"
 		$outfile = $computername + '~' + $user + '_PowerShellLog.txt'
 		copy-item ($userdir + $user + $PowerShellLog) $outfile
+		write-ioc "Review PowerShell log for user $user"
 	}
 
 	$Startup = '\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\'
 	if (Get-ChildItem ($userdir + $user + $startup)) {
 		write-IOC "Check User Startup directory for $user."
 	}
+
 }
 
+$uas = import-csv ($userdir + $computername + '~UserActivity_UserAssist.csv') | Where-Object {[datetime]::parse($_.LastExecuted) -gt $imagedate}
+if ($uas.length -gt 0) {
+	write-ioc ("Check " + $computername + '~UserActivity_UserAssist.csv' + " for activity.")
+}
+$tsc = import-csv ($userdir + $computername + '~UserActivity_TerminalServerClient.csv') | Where-Object {[datetime]::parse($_.LastModified) -gt $imagedate}
+if ($tsc.length -gt 0){
+	write-ioc ("Check " + $computername + '~UserActivity_TerminalServerClient.csv' + ' for activity.') 
+}
 get-childitem *_ChromeCookies.csv	| foreach-object{Normalize-Date $_.name 'Last Accessed,Created On,Expires'}
 get-childitem *_Chromehistory.csv	| foreach-object{Normalize-Date $_ 'Visited On'}
 get-childitem *_EdgeCookies.csv | foreach-object{Normalize-Date $_ 'Modified Time,Expire Time'}
