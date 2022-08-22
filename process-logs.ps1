@@ -255,6 +255,7 @@ function get-logsearches {
 	$a = import-csv ($csvdir + ($computername + '~application.csv'))
 	$a | where-object {($_.eventid -in (325,326,327,216)) -and ($_.LogSourceType -eq 'ESENT') -and $_.event -like '*ntds*'} | export-csv -notype ntds.dit-dumping.csv
 	$a | where-object {$_.eventid -eq 1000 -and $_.ShortEvent -eq 'Application Crashing Events'} | export-csv -notype ($computername + '~applicationcrash.csv')
+	$a | Where-Object {$_.eventid -eq 1309 -and $_.event -like '*type=rau*'} | export-csv -notype telerik.csv
 	write-debug "Searching log: $computername~applicationcrash.csv"
 	$t = import-csv ($computername + '~applicationcrash.csv')
 	$t | Select-String 'Faulting application name: (.+?), ' | foreach-object{$_.matches.groups.captures[1].value} | Group-Object | select-object count,name | Sort-Object count -desc > appcrash-histo.txt
@@ -501,6 +502,10 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	}
 	if (($ns | Where-Object {$_.event -like "*psexec*"}).length -gt 0) {
 		write-ioc "Check for PSEXEC usage"
+	}
+	$ns = (import-csv .($basedir + ($computername + '~Services.csv')))
+	if (($ns | Where-Object{$_.ValueData -like "*dameware*"}).length -gt 0) {
+		write-ioc "Check DameWare usage"
 	}
 	$wmil = import-csv ($csvdir + $computername + '~WMI-Activity%4Operational.csv')
 	if ($wmil | Where-Object {$_.event -like '*Win32_ShadowCopy*'}) {
