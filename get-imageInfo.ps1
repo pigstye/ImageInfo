@@ -85,9 +85,9 @@ function get-computername {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
-	"###+++###" | out-debut
-	$error[0] | out-debut
-	($PSItem.InvocationInfo).positionmessage | out-debut
+	"###+++###" | out-debug
+	$error[0] | out-debug
+	($PSItem.InvocationInfo).positionmessage | out-debug
 }
 
 
@@ -106,17 +106,17 @@ $host.ui.RawUI.WindowTitle="Processing $computername"
 #Lets set up the directory structure
 
 $basedir = get-path (get-location).path
-out-debut "Basedir = $basedir"
+out-debug "Basedir = $basedir"
 $windir = get-path ($drive + ':\windows')
-out-debut "Windir = $windir"
+out-debug "Windir = $windir"
 $userDir = ($drive + ':\users\')
 if (-not (test-path $userDir)) {
 	$userDir = ($drive + ':\Documents and Settings\')
 }
-out-debut "Userdir = $userdir"
+out-debug "Userdir = $userdir"
 mkdir 'userinfo' >> $null
 $userinfo = get-path 'userinfo'
-out-debut "Logdir = $logdir"
+out-debug "Logdir = $logdir"
 $logdir = get-path 'logs'
 
 write-log "Copying Event Logs"
@@ -138,7 +138,7 @@ if ($debug) {
 	$arg = ''
 }
 $arg += "-noprofile -command $script '$computername' '$basedir' '$logdir'"
-out-debut $arg
+out-debug $arg
 start-process "$pshome\powershell.exe" -argumentlist $arg
 write-log "Starting Log Analysis"
 
@@ -154,19 +154,19 @@ if (test-path ($drive + ':\inetpub')) {
 		$arg = ''
 	}
 	$arg += "-noprofile -command $script '$computername' '$basedir' '$inetpub' '$httperr' '$iisLogDir'"
-	out-debut $arg
+	out-debug $arg
 	start-process "$pshome\powershell.exe" -argumentlist $arg
 	write-log "Starting IIS Log Analysis"
 }
 
 $script = $scriptdir + '\process-registries.ps1'
 $config = $windir + 'System32\config\'
-out-debut "$script $computername $basedir $config $userdir $userinfo"
+out-debug "$script $computername $basedir $config $userdir $userinfo"
 & $script $computername $basedir $config $userdir $userinfo
 
 
 $script = $scriptdir + '\process-systeminfo.ps1'
-out-debut "$script $computername $basedir $windir $userdir"
+out-debug "$script $computername $basedir $windir $userdir"
 & $script $computername $basedir $windir $userdir
 
 $users = @()
@@ -184,7 +184,7 @@ foreach($user in $users) {
 set-location ..
 
 $script = $scriptdir + '\process-userinfo.ps1'
-out-debut "$script $computername $basedir $userdir $userinfo"
+out-debug "$script $computername $basedir $userdir $userinfo"
 & $script $computername $basedir $userdir $userinfo
 
 set-location $basedir

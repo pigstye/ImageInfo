@@ -65,15 +65,15 @@ function get-regbatch {
 		[Parameter(Mandatory=$True)][string]$out)
 	
 	trap {
-		"###+++###" | out-debut
-		$error[0] | out-debut
-		($PSItem.InvocationInfo).positionmessage | out-debut
+		"###+++###" | out-debug
+		$error[0] | out-debug
+		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
 	write-log "Getting $Title"
 	$batchCmd = $recmddir + $batch
 	$outfile = $computer + $out
-	out-debut "Executing Command: $recmd -d $path --bn $batchCmd --csv . --csvf $outfile"
-	& $recmd -d $path --bn $batchCmd --csv '.' --csvf $outfile | out-debut
+	out-debug "Executing Command: $recmd -d $path --bn $batchCmd --csv . --csvf $outfile"
+	& $recmd -d $path --bn $batchCmd --csv '.' --csvf $outfile | out-debug
 }
 
 function get-unquotedservicepaths 
@@ -128,9 +128,9 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	[Parameter(Mandatory=$True)][string]$userdir)
 
 	trap {
-		"###+++###" | out-debut
-		$error[0] | out-debut
-		($PSItem.InvocationInfo).positionmessage | out-debut
+		"###+++###" | out-debug
+		$error[0] | out-debug
+		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
 	
 	write-log "Creating SystemInfo.txt" -fore yellow
@@ -253,9 +253,9 @@ function get-auditinfo {
 	[Parameter(Mandatory=$True)][string]$basedir)
 	
 	trap {
-		"###+++###" | out-debut
-		$error[0] | out-debut
-		($PSItem.InvocationInfo).positionmessage | out-debut
+		"###+++###" | out-debug
+		$error[0] | out-debug
+		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
 	write-log "Creating AuditInfo.txt" -fore green
 	$audit = import-csv ($basedir + $computer + '~audit.csv')
@@ -764,18 +764,18 @@ function Format-HumanReadable([Parameter(Mandatory = $True)][int]$size) {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
-	"###+++###" | out-debut
-	$error[0] | out-debut
-	($PSItem.InvocationInfo).positionmessage | out-debut
+	"###+++###" | out-debug
+	$error[0] | out-debug
+	($PSItem.InvocationInfo).positionmessage | out-debug
 }
 
 if ($debug) {
-	out-debut "process-Registries.ps1"
-	out-debut "Computername = $Computername"
-	out-debut "Basedir = $basedir"
-	out-debut "Systemdir = $systemdir"
-	out-debut "Userdir = $userdir"
-	out-debut "Userinfo = $userinfo"
+	out-debug "process-Registries.ps1"
+	out-debug "Computername = $Computername"
+	out-debug "Basedir = $basedir"
+	out-debug "Systemdir = $systemdir"
+	out-debug "Userdir = $userdir"
+	out-debug "Userinfo = $userinfo"
 }
 
 $basedir = get-path $basedir
@@ -791,26 +791,26 @@ $userdir = get-path $userdir
 $imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 write-log "Processing System Registries for $computername" -fore yellow
-out-debut "Processing SystemInfo with systeminfo.reb"
+out-debug "Processing SystemInfo with systeminfo.reb"
 get-regbatch -title 'SystemInfo' -computer $computername -batch 'systeminfo.reb' -path $systemdir -out '~SystemInfo.csv'
-out-debut "Processing AuditInfo with audit.reb"
+out-debug "Processing AuditInfo with audit.reb"
 get-regbatch -title 'AuditInfo' -computer $computername -batch 'audit.reb' -path $systemdir -out '~Audit.csv'
-out-debut "Processing Services with services.reb"
+out-debug "Processing Services with services.reb"
 get-regbatch -title 'Services' -computer $computername -batch 'services.reb' -path $systemdir -out '~services.csv'
-out-debut "Processing unquoted service paths"
+out-debug "Processing unquoted service paths"
 get-unquotedservicepaths(($computername + '~services.csv')) | export-csv -notype ($computername + '~unquotedservicepaths.csv')
 
-out-debut "Processing 'Installed User Software' with installedsoftware.reb"
+out-debug "Processing 'Installed User Software' with installedsoftware.reb"
 get-regbatch -title 'Installed User Software' -computer $computername -batch 'installedsoftware.reb' -path $userdir -out '~usersoftware.csv'
 
-out-debut "Processing 'Installed System Software' with installedsoftware.reb"
+out-debug "Processing 'Installed System Software' with installedsoftware.reb"
 get-regbatch -title 'Installed System Software' -computer $computername -batch 'installedsoftware.reb' -path $systemdir -out '~systemsoftware.csv'
 
 mkdir Shellbags  >> $null
 set-location ShellBags
 	write-log "Getting Shellbags"
-	out-debut "Executing command: & $sb -d ($userDir) --csv ."
-	& $sb -d ($userDir) --csv . | out-debut
+	out-debug "Executing command: & $sb -d ($userDir) --csv ."
+	& $sb -d ($userDir) --csv . | out-debug
 	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
 					move-item $_.name $csvfile
 					Normalize-Date $csvfile 'LastInteracted,FirstInteracted,LastWriteTime'
@@ -831,7 +831,7 @@ write-log "Processing  User Registries for $computername" -fore yellow
 write-log "Getting User Info from Registries"
 #get-regbatch -title 'UserSamInfo' -computer $computername -batch 'sam.reb' -path $systemdir -out '~UserSam.csv'
 
-out-debut "Processing UserActivity with userActivity.reb"
+out-debug "Processing UserActivity with userActivity.reb"
 get-regbatch -title 'UserActivity' -computer $computername -batch 'userActivity.reb' -path $userDir -out '~UserActivity.csv'
 
 if (get-childitem *recentdocs.csv | where-object{import-csv $_ | where-object {$_.extension -eq '.iso'}}){
@@ -854,7 +854,7 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 
 import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace '*\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
 
-out-debut "Checking for common IOCs"
+out-debug "Checking for common IOCs"
 $usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
 if ($usa | Where-Object {$_.ProgramName -like ('*mi"+ "mik" + "atz*')}) {
 	write-ioc "Check for mi" + "mik" + "atz usage"
