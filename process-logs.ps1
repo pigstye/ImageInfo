@@ -91,7 +91,7 @@ Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyProp
 	}
 }
 
-function check-logRecordID {
+function test-logRecordID {
 <#
 	.Synopsis
 		Checks Event Logs for evidence of tampering
@@ -300,9 +300,9 @@ function get-logsearches {
 	write-debug 'Searching for Windows Defender malware detections'
 	import-csv ($csvdir + ($computername + '~Microsoft-Windows-Windows Defender%4Operational.csv')) | Where-Object {$_.event -like '*Severity: Severe*'} | export-csv -notype ($Computername + '~WindowsDefenderAlerts.csv')
 	write-log "Checking for Log Tampering" "cyan"
-	check-logRecordID ($csvdir + ($computername + '~security.csv')) | add-content LogTampering.txt
-	check-logRecordID ($csvdir + ($computername + '~system.csv')) | add-content LogTampering.txt
-	check-logRecordID ($csvdir + ($computername + '~application.csv')) | add-content LogTampering.txt
+	test-logRecordID ($csvdir + ($computername + '~security.csv')) | add-content LogTampering.txt
+	test-logRecordID ($csvdir + ($computername + '~system.csv')) | add-content LogTampering.txt
+	test-logRecordID ($csvdir + ($computername + '~application.csv')) | add-content LogTampering.txt
 $outstring = @"
 For Kerberoasting see https://adsecurity.org/?p=3458
 For PassTheHash see https://blog.stealthbits.com/how-to-detect-pass-the-hash-attacks/
@@ -370,7 +370,7 @@ function get-nonlocalip {
 	}
 }
 
-function check-ioc {
+function test-ioc {
 <#
 	.Synopsis
 		Checks Event logs for signs of compromise
@@ -390,6 +390,11 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	}
 
 	Write-Debug "Looking for Common Vulnerabilites"
+	$app = import-csv ($csvdir + $computername + '~Application.csv') | Where-Object {$_.eventid -eq 1309 -and $_.event -like '*type=rau*'}
+	if ($app.length -gt 0) {
+		write-ioc "Possible Telerik Vulnerability - Application Log, EventID 1309, 'Type=rau'"
+	}
+	$system = import-csv ($csvdir + $computername + '~System.csv')
 	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge $imagedate}).length
 	if ($stnum -gt 0) {
 		write-ioc "$stnum New Services created in last 30 days"
@@ -584,7 +589,7 @@ write-log "Checking for Non-local IP Addresses in the logs."
 (get-childitem ($basedir + 'logs-csv\*.csv')).fullname | get-nonlocalip | add-content ($logsearches + 'NonLocalIPAddresses.txt')
 
 write-log "Searching for IOCs."
-check-ioc $Computername ($basedir + 'logs-csv\')
+test-ioc $Computername ($basedir + 'logs-csv\')
 
 $outstring = @"
 S-1-5-7	Anonymous

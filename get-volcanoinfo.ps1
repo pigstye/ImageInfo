@@ -66,21 +66,21 @@ function write-log {
 
 
 #api conversion functions
-function convertjson2-csv {
+function convertfrom-json2-csv {
 	Param([Parameter(Mandatory=$True)][String]$path)
 	$path
 	$tmp = get-content ('.\Windows\' + $path + '.jsonl') | convertfrom-json
 	$tmp | export-csv -notype ($path + '.csv')
 }
 
-function convertjson1-csv {
+function convertfrom-json1-csv {
 	Param([Parameter(Mandatory=$True)][String]$path)
 	$path
 	$tmp = get-content ('.\Windows\' + $path + '.jsonl') | convertfrom-json
 	$tmp.result | export-csv -notype ($path + '.csv')
 }
 
-function convertjson0-txt {
+function convertfrom-json0-txt {
 	Param([Parameter(Mandatory=$True)][String]$path)
 	$path
 	(get-content ('.\Windows\' + $path + '.jsonl') | convertfrom-json).result | add-content ($path + '.txt')
@@ -121,13 +121,13 @@ write-log "Processing Volcano at $workingdir"
 
 push-location API
 foreach($api in $api0) {
-	convertjson0-txt $api
+	convertfrom-json0-txt $api
 }
 foreach($api in $api1) {
-	convertjson1-csv $api
+	convertfrom-json1-csv $api
 }
 foreach($api in $api2) {
-	convertjson2-csv $api
+	convertfrom-json2-csv $api
 }
 copy-item CreateToolhelp32Snapshot_TH32CS_SNAPPROCESS.csv ('..\files\' + $computername + '-ProcessList.csv')
 copy-item GetExtendedTcpTable.csv ('..\files\' + $computername + '-networkconnections.csv')
