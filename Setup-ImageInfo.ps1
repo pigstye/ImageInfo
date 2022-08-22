@@ -55,7 +55,7 @@ for($i=0;$i -lt 11;$i++) {
     Invoke-WebRequest -uri $uri -outfile $outfile -UseBasicParsing
     $destpath = $dest[$i].substring(0,$dest[$i].lastindexof('\')+1)
     Expand-Archive $outfile -DestinationPath $destpath -force
-    rm $outfile
+    Remove-Item $outfile
 }
 move-item ($recmddir + 'RECmd\*') $recmddir
 
