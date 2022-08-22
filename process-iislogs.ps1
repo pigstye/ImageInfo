@@ -55,9 +55,9 @@ function import-iislogs {
 #>
 	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$Logfile)
 	trap {
-		"###+++###" | Write-Debug
-		$error[0] | write-debug
-		($PSItem.InvocationInfo).positionmessage | write-debug
+		"###+++###" | out-debut
+		$error[0] | out-debut
+		($PSItem.InvocationInfo).positionmessage | out-debut
 	}
 	
 	$f = get-childitem $logfile
@@ -73,19 +73,19 @@ function import-iislogs {
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
-	"###+++###" | Write-Debug
-	$error[0] | write-debug
-	($PSItem.InvocationInfo).positionmessage | write-debug
+	"###+++###" | out-debut
+	$error[0] | out-debut
+	($PSItem.InvocationInfo).positionmessage | out-debut
 }
 
 if ($debug) {
-	write-debug "Process-iislogs.ps1"
-	write-debug "Parameters:"
-	write-debug "Computername = $Computername"
-	write-debug "Basedir = $basedir"
-	write-debug "Inetpub = $inetpub"
-	write-debug "HTTPErr = $httperr"
-	write-debug "logdir = $logdir"
+	out-debut "Process-iislogs.ps1"
+	out-debut "Parameters:"
+	out-debut "Computername = $Computername"
+	out-debut "Basedir = $basedir"
+	out-debut "Inetpub = $inetpub"
+	out-debut "HTTPErr = $httperr"
+	out-debut "logdir = $logdir"
 }
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -108,7 +108,7 @@ $httperr = get-path $httperr
 
 Push-Location $basedir
 
-(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Processing IIS Logs' | write-debug
+(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Processing IIS Logs' | out-debut
 
 
 if (test-path ($inetpub + 'logs' )) {
@@ -128,7 +128,7 @@ if (test-path ($inetpub + 'logs' )) {
 		push-location iislogs
 	}
 	$iiscsv = get-path 'csv'
-	write-debug "iiscsv = $iiscsv"
+	out-debut "iiscsv = $iiscsv"
 	set-location $iiscsv
 	write-log "Converting to CSV"
 	get-childitem ..\*.log -recurse | foreach-object{Import-IISLogs $_.fullname}
@@ -153,5 +153,5 @@ if (test-path ($inetpub + 'logs' )) {
 	start-sleep -s 5
 }
 
-(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Finished processing IIS Logs' | write-debug
+(get-date).tostring("yyyy-MM-dd HH:mm") + ' - Finished processing IIS Logs' | out-debut
 pop-location

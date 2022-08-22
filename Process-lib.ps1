@@ -61,7 +61,7 @@ function update-systemstatuslog {
 	$DateTime = (get-date).tostring("M-d-yyyy h:mm")
 	$statusLog = $localpath + 'SystemStatusLog.txt'
 	$DateTime + ' - ' + $msg | add-content $statusLog
-	write-debug ("Status: " + $msg)
+	out-debut ("Status: " + $msg)
 }
 function write-log {
 	param([Parameter(Mandatory=$True)][string]$msg,[Parameter(Mandatory=$false)][string]$fore="white")
@@ -69,7 +69,7 @@ function write-log {
 	$dte = get-date
 	write-host $msg -fore $fore
 	$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content $msglog
-	write-debug ($dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg)
+	out-debut ($dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg)
 }
 
 function write-Hostlog {
@@ -91,7 +91,7 @@ function write-Hostlog {
 	}
 	$dte = get-date
 	$dte.tostring("M-d-yyyy HH:mm") + ',' + $msg | add-content $msglog
-	write-debug  $msg
+	out-debut  $msg
 }
 
 function add-slash {
@@ -112,7 +112,7 @@ function get-path {
 	return $tmp
 }
 
-function write-debug {
+function out-debut {
 	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
 	
 	if ($debug) {

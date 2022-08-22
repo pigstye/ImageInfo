@@ -36,17 +36,17 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
-	"###+++###" | Write-Debug
-	$error[0] | write-debug
-	($PSItem.InvocationInfo).positionmessage | write-debug
+	"###+++###" | out-debut
+	$error[0] | out-debut
+	($PSItem.InvocationInfo).positionmessage | out-debut
 }
 
 if ($debug) {
-	write-debug  "process-userinfo.ps1"
-	write-debug  "Computername = $Computername"
-	write-debug  "Basedir = $basedir"
-	write-debug  "Userdir = $userdir"
-	write-debug  "Userinfo = $userinfo"
+	out-debut  "process-userinfo.ps1"
+	out-debut  "Computername = $Computername"
+	out-debut  "Basedir = $basedir"
+	out-debut  "Userdir = $userdir"
+	out-debut  "Userinfo = $userinfo"
 }
 
 $basedir = get-path $basedir
@@ -71,22 +71,22 @@ write-log 'Processing Each User'
 
 foreach ($user in $users) {
 	trap {
-		"###+++###" | Write-Debug
-		$error[0] | write-debug
-		($PSItem.InvocationInfo).positionmessage | write-debug
+		"###+++###" | out-debut
+		$error[0] | out-debut
+		($PSItem.InvocationInfo).positionmessage | out-debut
 	}
-	Write-Debug "User $user being processed"
+	out-debut "User $user being processed"
 	write-log "Getting $user Jump Lists"
 	$jl = $userdir + $user + '\Appdata\Roaming\Microsoft\Windows\Recent'
 	$fle = $computername + '~RecentFiles_' + $user + '.csv'
-	Write-Debug "Executing command: $jleCmd -d $jl --all --fd --csv '.' --csvf $fle -q"
-	& $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q  | write-debug
+	out-debut "Executing command: $jleCmd -d $jl --all --fd --csv '.' --csvf $fle -q"
+	& $jleCmd -d $jl --all --fd --csv "." --csvf $fle -q  | out-debut
 
 	$chromeCache = $userdir + $user + '\AppData\Local\Google\Chrome\User Data\Default\Cache'
 	If (test-path $chromeCache) {
 		write-log "Getting $user Chrome Cache"
 		$output = $computername + '~' + $user + '_ChromeCache.txt'
-		Write-Debug "Executing command: $ccv /folder $chromeCache /stext $output"
+		out-debut "Executing command: $ccv /folder $chromeCache /stext $output"
 		& $ccv /folder $chromeCache /stext $output
 	}
 
@@ -94,7 +94,7 @@ foreach ($user in $users) {
 	If (test-path $chromeCookie) {
 		write-log "Getting $user Chrome Cookies"
 		$output = $computername + '~' + $user + '_ChromeCookies.csv'
-		Write-Debug "Executing command: $ccov /CookiesFile $chromeCookie /scomma $output"
+		out-debut "Executing command: $ccov /CookiesFile $chromeCookie /scomma $output"
 		& $ccov /CookiesFile $chromeCookie /scomma $output
 	}
 
@@ -102,7 +102,7 @@ foreach ($user in $users) {
 	If (test-path $chromeHistory) {
 		write-log "Getting $user Chrome History"
 		$output = $computername + '~' + $user + '_Chromehistory.csv'
-		Write-Debug "Executing command: $chv /UserHistoryFile 1 /HistoryFile $chromehistory /scomma $output"
+		out-debut "Executing command: $chv /UserHistoryFile 1 /HistoryFile $chromehistory /scomma $output"
 		& $chv /UserHistoryFile 1 /HistoryFile $chromehistory /scomma $output
 	}
 	
@@ -110,7 +110,7 @@ foreach ($user in $users) {
 	If (test-path $edgeCookie) {
 		write-log "Getting $user Edge Cookies"
 		$output = $computername + '~' + $user + '_EdgeCookies.csv'
-		Write-Debug "Executing command: $ecv /loadfrom 2 /DatabaseFilename $edgeCookie /scomma $output"
+		out-debut "Executing command: $ecv /loadfrom 2 /DatabaseFilename $edgeCookie /scomma $output"
 		& $ecv /loadfrom 2 /DatabaseFilename $edgeCookie /scomma $output
 	}
 
@@ -118,7 +118,7 @@ foreach ($user in $users) {
 	If (test-path $ieCache) {
 		write-log "Getting $User IE Cache"
 		$output = $computername + '~' + $user + '_IECache.txt'
-		Write-Debug "Executing command: $iev -f $IECache /stext $output"
+		out-debut "Executing command: $iev -f $IECache /stext $output"
 		& $iev -f $IECache /stext $output
 	}
 
@@ -128,7 +128,7 @@ foreach ($user in $users) {
 		$i = 1
 		foreach ($profile in $profiles) {
 			$output = $computername + '~' + $user + '_firefoxDownloads' + $i + '.csv'
-			Write-Debug "Executing command: $ffd /UseNewFirefoxDM 1 /profile $profile.fullname /scomma $output"
+			out-debut "Executing command: $ffd /UseNewFirefoxDM 1 /profile $profile.fullname /scomma $output"
 			& $ffd /UseNewFirefoxDM 1 /profile $profile.fullname /scomma $output
 			$i += 1
 		}
@@ -138,7 +138,7 @@ foreach ($user in $users) {
 		write-log "Getting $user Win10 Activity"
 		$profile1 = $userdir + $user + '\AppData\Local\ConnectedDevicesPlatform\L.' + $user + '\ActivitiesCache.db'
 		$d = ".\" + $user
-		Write-Debug "Executing command: $wtxcmd -f $profile1 --csv $d"
+		out-debut "Executing command: $wtxcmd -f $profile1 --csv $d"
 		& $wtxcmd -f $profile1 --csv $d
 	}
 
