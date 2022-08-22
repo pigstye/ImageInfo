@@ -337,23 +337,35 @@ If (Test-path ($drive + '\ProgramData\Microsoft\Network\Downloader\')) {
 }
 
 If (Test-path ($windir + 'System32\LogFiles\Sum\')) {
-	write-log 'Processing Sum databases'
-	mkdir SumDatabase >> $null
-	set-location SumDatabase
-	copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
-	out-debut "Executing command: $srum .\SystemIdentity.mdb"
-	& $srum .\SystemIdentity.mdb | out-debut
-	mkdir Current >> $null
-	move-item current.mdb Current
-	set-location Current
-	out-debut "Executing command: $srum current.mdb"
-	& $srum current.mdb | out-debut
-	set-location ..
-	$l = import-csv .\CHAINED_DATABASES.csv
-	foreach ($r in $l) {mkdir $r.year  >> $null;move-item $r.filename $r.year}
-	foreach ($r in $l) {set-location $r.year;& $srum *.mdb | out-debut ;set-location ..}
-	get-childitem *.csv -recurse | foreach-object{push-location $_.directory;rename-item $_.name ($computername + '~' + $_.name);pop-location}
-	set-location ..
+	try {
+		[Console]::TreatControlCAsInput = $true
+		if ([Console]::KeyAvailable) {
+			$key = [Console]::ReadKey($true)
+			if ($key.key -eq "C" -and $key.modifiers -eq "Control") { 
+				[Console]::TreatControlCAsInput = $false
+				out-debug "Caught ^C while processing SUM Database"
+				break
+			}
+		}
+		write-log 'Processing Sum databases'
+		mkdir SumDatabase >> $null
+		set-location SumDatabase
+		copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
+		out-debut "Executing command: $srum .\SystemIdentity.mdb"
+		& $srum .\SystemIdentity.mdb | out-debut
+		mkdir Current >> $null
+		move-item current.mdb Current
+		set-location Current
+		out-debut "Executing command: $srum current.mdb"
+		& $srum current.mdb | out-debut
+		set-location ..
+		$l = import-csv .\CHAINED_DATABASES.csv
+		foreach ($r in $l) {mkdir $r.year  >> $null;move-item $r.filename $r.year}
+		foreach ($r in $l) {set-location $r.year;& $srum *.mdb | out-debut ;set-location ..}
+		get-childitem *.csv -recurse | foreach-object{push-location $_.directory;rename-item $_.name ($computername + '~' + $_.name);pop-location}
+	} finally {
+		set-location ..
+	}
 } else {
 	write-log 'Did not find SUM database'
 }
