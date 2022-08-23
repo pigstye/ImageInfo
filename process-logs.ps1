@@ -395,8 +395,9 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		write-ioc "Possible Telerik Vulnerability - Application Log, EventID 1309, 'Type=rau'"
 	}
 	$system = import-csv ($csvdir + $computername + '~System.csv')
-		if ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge $imagedate}) {
-		write-ioc "$stnum New Services created in last 30 days"
+	$stnum = ($system | where-object {$_.eventid -eq 7045 -and [datetime]::parse($_.datetime) -ge $imagedate}).length
+	if ($stnum -gt 0) {
+		write-ioc ("$stnum New Services created in last 30 days")
 	}
 	if ($system | where-object {$_.eventid -eq 7045 -and $_.event -like '*powershell.exe*'}) {
 		write-ioc "$stnum New Services created running PowerShell command."
