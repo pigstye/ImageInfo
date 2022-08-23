@@ -10,3 +10,4 @@ These files should be here
 \Nirsoft\FireFoxDownloadsview.exe
 \Nirsoft\IECacheview.exe
 \Nirsoft\MozillaCacheview.exe
+\Nirsoft\ese_database_view.exe
