@@ -272,33 +272,73 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	write-log 'Getting SRUM data'
 	mkdir Srum  >> $null
 	set-location srum
-	out-debug "Executing command: $srum -p ese2csv.exesrudb_plugin $windir'system32\sru\srudb.dat'"
-	& $srum -p ese2csv.exesrudb_plugin ($windir + 'system32\sru\srudb.dat') | out-debug
+	$sdb = ($windir + 'system32\sru\srudb.dat')
+	#Download tables
+	out-debug "Getting Tables"
+	& $nese /table $sdb 'SruDbIDMapTable' /SaveDirect /scomma ($computername + '-SruDbIDMapTable.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{973F5D5C-1D90-4944-BE8E-24B94231A174}' /SaveDirect /scomma ($computername + '-NetworkUsage.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{D10CA2FE-6FCF-4F6D-848E-B2E99266FA86}' /SaveDirect /scomma ($computername + '-PushNotification.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{DD6636C4-8929-4683-974E-22C046A43763}' /SaveDirect /scomma ($computername + '-NetworkConnection.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{5C8CF1C7-7257-4F13-B223-970EF5939312}' /SaveDirect /scomma ($computername + '-TimelineProvider.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{D10CA2FE-6FCF-4F6D-848E-B2E99266FA89}' /SaveDirect /scomma ($computername + '-AppResourceInfo.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}LT' /SaveDirect /scomma ($computername + '-EnergyUsage-LongTerm.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}' /SaveDirect /scomma ($computername + '-EnergyUsage.csv') | out-debug
+	start-sleep -seconds 3
+	& $nese /table $sdb '{7ACBBAA3-D029-4BE4-9A7A-0885927F1D8F}' /SaveDirect /scomma ($computername + '-Vfuprov.csv') | out-debug
+	start-sleep -seconds 3
+
+	out-debug "Processing Map Table"
+	#Start processing with Map Table
+	$tmpdb = import-csv ($computername + '-SruDbIDMapTable.csv')
+	$tmpdb | foreach-object {
+		if ($_.idType -eq 3){
+			# Convert userSID
+			[byte[]]$t = $_.idblob -split ' ' | ForEach-Object{[byte]([convert]::toint16($_,16))}
+			$_.idblob = (New-Object System.Security.Principal.SecurityIdentifier($t,0)).Value
+		} else {
+			# Convert UTF-16 Blob
+			$s = $_.idblob
+			$_.idblob = (($s -split ' ') | ForEach-Object{[char][byte]([convert]::toint16($_,16))}) -join ''
+		}
+	}
+	$tmpdb | export-csv -notype ($computername + '-SruDbIDMapTable.csv')
+	#Create Hash Table for easy access
+	out-debug "Creating Hastable from map table"
+	$srudb = $tmpdb | group-object -ashashtable -asstring -property idIndex
+
+	$tables = @('-NetworkUsage.csv','-PushNotification.csv','-NetworkConnection.csv','-TimelineProvider.csv','-AppResourceInfo.csv','-EnergyUsage-LongTerm.csv','-EnergyUsage.csv','-Vfuprov.csv')
+	foreach($tbl in $tables){
+		$tmp = import-csv ($computername + $tbl)
+		out-debug "Processing $computername$tbl"
+		$tmp | ForEach-Object{
+			$id = $_.Userid 
+			if (($srudb.$id).idblob) {
+				$_.userid = ($srudb.$id).idblob
+			}
+			$id = $_.AppID 
+			if (($srudb.$id).idblob) {
+				$_.AppID = ($srudb.$id).idblob
+			}
+		}
+		$tmp | export-csv -notype ($computername + $tbl)
+	}
 	
-	Normalize-Date 'Application Resource Usage.csv' 'TimeStamp'
-	move-item 'Application Resource Usage.csv' ($computername + '~SRUM_Application_Resource_Usage.csv')
-	Normalize-Date 'Application Resources.csv' 'TimeStamp'
-	move-item 'Application Resources.csv' ($computername + '~SRUM_Application_Resources.csv')
-	Normalize-Date 'Energy Usage (Long-Term).csv' 'TimeStamp'
-	move-item 'Energy Usage (Long-Term).csv' ($computername + '~SRUM_Energy_Usage_(Long-Term).csv')
-	Normalize-Date 'Energy Usage.csv' 'TimeStamp'
-	move-item 'Energy Usage.csv' ($computername + '~SRUM_Energy_Usage.csv')
-	Normalize-Date 'Network Connections.csv' 'TimeStamp'
-	move-item 'Network Connections.csv' ($computername + '~SRUM_Network_Connections.csv')
-	Normalize-Date 'Network Usage.csv' 'TimeStamp'
-	move-item 'Network Usage.csv' ($computername + '~SRUM_Network_Usage.csv')
-	Normalize-Date 'SruDbCheckpointTable.csv' ''
-	move-item 'SruDbCheckpointTable.csv' ($computername + '~SRUM_SruDbCheckpointTable.csv')
-	Normalize-Date 'SruDbIdMapTable.csv' ''
-	move-item 'SruDbIdMapTable.csv' ($computername + '~SRUM_SruDbIdMapTable.csv')
-	Normalize-Date 'Unknown1.csv' 'StartTime'
-	move-item 'Unknown1.csv' ($computername + '~SRUM_Unknown1.csv')
-	Normalize-Date 'Unknown2.csv' 'TimeStamp'
-	move-item 'Unknown2.csv' ($computername + '~SRUM_Unknown2.csv')
-	Normalize-Date 'Unknown3.csv' 'TimeStamp'
-	move-item 'Unknown3.csv' ($computername + '~SRUM_Unknown3.csv')
-	Normalize-Date 'Unknown4.csv' 'TimeStamp'
-	move-item 'Unknown4.csv' ($computername + '~SRUM_Unknown4.csv')
+	normalize-date ($computername + '-NetworkUsage.csv') 'TimeStamp'
+	normalize-date ($computername + '-PushNotification.csv') 'TimeStamp'
+	normalize-date ($computername + '-NetworkConnection.csv') 'TimeStamp'
+	normalize-date ($computername + '-TimelineProvider.csv') 'TimeStamp'
+	normalize-date ($computername + '-AppResourceInfo.csv') 'TimeStamp'
+	normalize-date ($computername + '-EnergyUsage-LongTerm.csv') 'TimeStamp'
+	normalize-date ($computername + '-EnergyUsage.csv') 'TimeStamp'
+	normalize-date ($computername + '-Vfuprov.csv') 'TimeStamp'
+
 	set-location ..
 } else {
 	write-log "Did not find SRUM data"
