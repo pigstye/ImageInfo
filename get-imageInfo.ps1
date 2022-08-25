@@ -201,6 +201,49 @@ if ($poc.length -gt 0) {
 if ($mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
 		write-ioc "Check the executables in c:\Users\Public\"
 }
+$mftinfo = import-csv ($computername + '~mft.csv')
+if ($mftinfo | where-object {$_.FileName -eq 'Adfind.exe'}) {
+	write-ioc "Check for Adfind.exe"
+}
+if ($mftinfo | where-object {$_.FileName -like '*kerberoast*'}) {
+	write-ioc "Check for invoke-kerberoast.ps1"
+}
+if ($mftinfo | where-object {$_.FileName -like '*rufus*'}) {
+	write-ioc "Check for rufus.exe"
+}
+if ($mftinfo | where-object {$_.FileName -like '*netscan*'}) {
+	write-ioc "Check for netscan.exe"
+}
+if ($mftinfo | where-object {$_.FileName -like '*PowerSploit*'}) {
+	write-ioc "Check for PowerSploit"
+}
+if ($mftinfo | where-object {$_.FileName -like '*proxifier*'}) {
+	write-ioc "Check for Proxifier"
+}
+if ($mftinfo | where-object {$_.FileName -like '*PowerUpSQL*'}) {
+	write-ioc "Check for PowerUpSQL"
+}
+if ($mftinfo | where-object {$_.FileName -like '*rclone*'}) {
+	write-ioc "Check for rclone"
+}
+if ($mftinfo | where-object {$_.FileName -like '*routerscan*'}) {
+	write-ioc "Check for Routerscan"
+}
+if ($mftinfo | where-object {$_.FileName -like '*ShareFinder*'}) {
+	write-ioc "Check for invoke-sharefinder.ps1"
+}
+if ($mftinfo | where-object {$_.FileName -like '*SMBAutoBrute*'}) {
+	write-ioc "Check for SMBAutoBrute"
+}
+if ($mftinfo | where-object {$_.FileName -like '*pchunter*'}) {
+	write-ioc "Check for pchunter"
+}
+if ($mftinfo | where-object {$_.FileName -like '*Powertool*'}) {
+	write-ioc "Check for Powertool"
+}
+if ($mftinfo | where-object {$_.FileName -like '*net-gpppassword*'}) {
+	write-ioc "Check for Net-GPPPassword.exe"
+}
 
 get-childitem * | where-object { $_.length -eq 0} | remove-item
 
