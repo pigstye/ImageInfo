@@ -175,14 +175,10 @@ if (test-path $mftfile) {
 	$poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 	if ($poc.length -gt 0) {
 			write-ioc "Check the executables in the root of c:\ProgramData"
-			write-ioc '      Filename   -   Parent   -   Created0x10   -   LastModified0x10   -   LastAccess0x10'
-			$poc | foreach-object{"    " + $_.Filename + ' - ' + $_.parent + ' - ' + $_.Created0x10 + ' - ' + $_.LastModified0x10 + ' - ' + $_.LastAccess0x10 | write-ioc} 
 	}
 	$poc = $mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 	if ($poc.length -gt 0) {
 			write-ioc "Check the executables in c:\Users\Public\"
-			write-ioc '      Filename   -   Parent   -   Created0x10   -   LastModified0x10   -   LastAccess0x10'
-			$poc | ForEach-Object{"    " + $_.Filename + ' - ' + $_.parent + ' - ' + $_.Created0x10 + ' - ' + $_.LastModified0x10 + ' - ' + $_.LastAccess0x10 | write-ioc } 
 	}
 }
 

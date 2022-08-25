@@ -252,9 +252,10 @@ $st = import-csv $outfile
 if ($st | Where-Object {$_.Actions -like '*.ps1*'}) {
 	write-ioc "Check for Scheduled Task running a PowerShell script"
 }
-if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
-	write-ioc "Check for Scheduled Task running a Visual Basic Script (.vbs)"
-}
+# Too noisy
+#if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
+#	write-ioc "Check for Scheduled Task running a Visual Basic Script (.vbs)"
+#}
 if ($st | Where-Object {$_.Actions -like '*plink*'}) {
 	write-ioc "Check for Scheduled Task running plink"
 }

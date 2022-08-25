@@ -820,7 +820,7 @@ set-location ShellBags
 	get-childitem *.csv | ForEach-Object{$sbs += import-csv $_ | Where-Object {[datetime]::parse($_.Lastinteracted) -ge $imagedate}}
 	if ($sbs) {
 		$sbs | export-csv -notype ($computername + '~RecentShellbags.csv')
-		write-ioc ('Check ' + $computername + '~RecentShellbags' + ' for activity.')
+		write-ioc ('Check ' + $computername + '~RecentShellbags for activity.')
 	}
 set-location ..
 
