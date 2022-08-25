@@ -193,18 +193,13 @@ Write-Log 'Exporting MFT'
 & $mft -f ($drive + ':\$MFT') --csv $basedir --csvf ($computername + '~mft.csv')
 Normalize-Date ($computername + '~mft.csv') 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
-$mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {$_.LastModified0x10 -gt $imagedate}
+$mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {[datetime]::parse($_.LastModified0x10) -gt $imagedate}
 $poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 if ($poc.length -gt 0) {
 		write-ioc "Check the executables in the root of c:\ProgramData"
-		write-ioc '      Filename   -   Parent   -   Created0x10   -   LastModified0x10   -   LastAccess0x10'
-		$poc | foreach-object{"    " + $_.Filename + ' - ' + $_.parent + ' - ' + $_.Created0x10 + ' - ' + $_.LastModified0x10 + ' - ' + $_.LastAccess0x10 | write-ioc} 
 }
-$poc = $mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 if ($mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
 		write-ioc "Check the executables in c:\Users\Public\"
-		write-ioc '      Filename   -   Parent   -   Created0x10   -   LastModified0x10   -   LastAccess0x10'
-		$poc | ForEach-Object{"    " + $_.Filename + ' - ' + $_.parent + ' - ' + $_.Created0x10 + ' - ' + $_.LastModified0x10 + ' - ' + $_.LastAccess0x10 | write-ioc} 
 }
 
 get-childitem * | where-object { $_.length -eq 0} | remove-item
