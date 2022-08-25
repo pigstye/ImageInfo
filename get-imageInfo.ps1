@@ -83,9 +83,11 @@ function get-computername {
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
+$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
+	$scriptname | out-debug
 	$error[0] | out-debug
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
@@ -130,7 +132,9 @@ copy-item $evtlogs $logdir
 
 $s = (get-childitem $logdir).lastwritetime
 ($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
+
 $imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 $script = $scriptdir + '\process-logs.ps1'
 if ($debug) {
 	$arg = '-noexit '

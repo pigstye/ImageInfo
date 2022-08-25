@@ -24,6 +24,8 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 <#
   Configuration Information
 #>
+$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 . ($psscriptroot + '.\process-lib.ps1')
 
@@ -125,6 +127,7 @@ function get-task {
 
 		trap {
 			"###+++###" | out-debug
+			$scriptname | out-debug
 			$error[0] | out-debug
 			($PSItem.InvocationInfo).positionmessage | out-debug
 		}
@@ -177,6 +180,7 @@ $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
+	$scriptname | out-debug
 	$error[0] | out-debug
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
@@ -193,7 +197,6 @@ if ($debug) {
 $basedir = get-path $basedir
 $windir = get-path $windir
 $drive = (get-item $windir).parent.name[0]
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 push-location $basedir
 
@@ -201,29 +204,29 @@ write-log 'Getting Systeminfo'
 
 write-log "Getting Application Compatability Cache (ShimCache)"
 $outfile = $computername + '~AppCompatCache.csv'
-out-debug "Executing command: $appCompCmd -f $windir'System32\config\SYSTEM' --csv . --csvf $outfile"
+out-debug "$scriptname - Executing command: $appCompCmd -f $windir'System32\config\SYSTEM' --csv . --csvf $outfile"
 & $appCompCmd -f ($windir + 'System32\config\SYSTEM') --csv . --csvf $outfile | out-debug
 
 write-log "Getting AmCache"
 $outfile = $computername + '~AmCache.csv'
-out-debug "Executing command: $appCacheCmd -f $windir'appcompat\programs\Amcache.hve' --csv . --csvf $outfile"
+out-debug "$scriptname - Executing command: $appCacheCmd -f $windir'appcompat\programs\Amcache.hve' --csv . --csvf $outfile"
 & $appCacheCmd -f ($windir + 'appcompat\programs\Amcache.hve') --csv . --csvf $outfile | out-debug
 
 write-log "Getting Recent File Cache"
 $recentFC = $windir + 'AppCompat\Programs\RecentFileCache.bcf'
 $outfile = $computername + '~RecentFileCache.csv'
-out-debug "Executing command: $rfc -f $recentFC --csv . --csvf $outfile"
+out-debug "$scriptname - Executing command: $rfc -f $recentFC --csv . --csvf $outfile"
 & $rfc -f $recentFC --csv "." --csvf $outfile | out-debug
 
 write-log "Getting Recycle Bin"
 $RB = $drive + ':\$Recycle.Bin'
 $outfile = $computername + '~RecycleBin.csv'
-out-debug "Executing command: $RBCMD -d $RB --csv . --csvf $outfile"
+out-debug "$scriptname - Executing command: $RBCMD -d $RB --csv . --csvf $outfile"
 & $RBCMD -d $RB --csv "." --csvf $outfile | out-debug
 
 write-log "Getting Browser History"
 $outfile = $computername + '~browserhistory.csv'
-out-debug "Executing command: $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)"
+out-debug "$scriptname - Executing command: $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)"
 & $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)  | out-debug
 $brh = import-csv $outfile
 if ($brh | where-object{$_.url -like "*ngrok*"}){
@@ -239,7 +242,7 @@ if ($brh | where-object{$_.url -like "*mega.nz*"}){
 
 write-log "Getting Application Crash Info"
 $outfile = $computername + '~AppCrash.txt'
-out-debug "Executing command: $appcrash /profilesfolder $userdir /stext $outfile"
+out-debug "$scriptname - Executing command: $appcrash /profilesfolder $userdir /stext $outfile"
 & $appcrash /profilesfolder $userdir /stext $outfile
 
 write-log 'Getting Scheduled Tasks'
@@ -266,36 +269,46 @@ if ($stnum -gt 0) {
 
 write-log 'Getting Prefetch'
 $outfile = $computername + '~Prefetch.csv'
-out-debug "Executing command: $pecmd -d $windir'prefetch' --csv . --csvf $outfile"
+out-debug "$scriptname - Executing command: $pecmd -d $windir'prefetch' --csv . --csvf $outfile"
 & $pecmd -d ($windir + 'prefetch') --csv '.' --csvf $outfile | out-debug
 
 if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	write-log 'Getting SRUM data'
+	out-debug '$scriptname - Getting SRUM data'
 	mkdir Srum  >> $null
 	set-location srum
 	$sdb = ($windir + 'system32\sru\srudb.dat')
 	#Download tables
-	out-debug "Getting Tables"
+	out-debug "$scriptname - Getting Tables"
+	out-debug "$scriptname - Getting Map Table"
 	& $nese /table $sdb 'SruDbIDMapTable' /SaveDirect /scomma ($computername + '-SruDbIDMapTable.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting Network Usage Table"
 	& $nese /table $sdb '{973F5D5C-1D90-4944-BE8E-24B94231A174}' /SaveDirect /scomma ($computername + '-NetworkUsage.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting Push Notification Table"
 	& $nese /table $sdb '{D10CA2FE-6FCF-4F6D-848E-B2E99266FA86}' /SaveDirect /scomma ($computername + '-PushNotification.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting Network Connections Table"
 	& $nese /table $sdb '{DD6636C4-8929-4683-974E-22C046A43763}' /SaveDirect /scomma ($computername + '-NetworkConnection.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting TimeLine Provider Table"
 	& $nese /table $sdb '{5C8CF1C7-7257-4F13-B223-970EF5939312}' /SaveDirect /scomma ($computername + '-TimelineProvider.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting App Resource Info Table"
 	& $nese /table $sdb '{D10CA2FE-6FCF-4F6D-848E-B2E99266FA89}' /SaveDirect /scomma ($computername + '-AppResourceInfo.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting Energy Usage Long Term Table"
 	& $nese /table $sdb '{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}LT' /SaveDirect /scomma ($computername + '-EnergyUsage-LongTerm.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting Energy Usage Table"
 	& $nese /table $sdb '{FEE4E14F-02A9-4550-B5CE-5FA2DA202E37}' /SaveDirect /scomma ($computername + '-EnergyUsage.csv') | out-debug
 	start-sleep -seconds 3
+	out-debug "$scriptname - Getting Vfprov Table"
 	& $nese /table $sdb '{7ACBBAA3-D029-4BE4-9A7A-0885927F1D8F}' /SaveDirect /scomma ($computername + '-Vfuprov.csv') | out-debug
 	start-sleep -seconds 3
 
-	out-debug "Processing Map Table"
+	out-debug "$scriptname - Processing Map Table"
 	#Start processing with Map Table
 	$tmpdb = import-csv ($computername + '-SruDbIDMapTable.csv')
 	$tmpdb | foreach-object {
@@ -311,13 +324,13 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	}
 	$tmpdb | export-csv -notype ($computername + '-SruDbIDMapTable.csv')
 	#Create Hash Table for easy access
-	out-debug "Creating Hastable from map table"
+	out-debug "$scriptname - Creating Hastable from SRUM map table"
 	$srudb = $tmpdb | group-object -ashashtable -asstring -property idIndex
 
 	$tables = @('-NetworkUsage.csv','-PushNotification.csv','-NetworkConnection.csv','-TimelineProvider.csv','-AppResourceInfo.csv','-EnergyUsage-LongTerm.csv','-EnergyUsage.csv','-Vfuprov.csv')
 	foreach($tbl in $tables){
 		$tmp = import-csv ($computername + $tbl)
-		out-debug "Processing $computername$tbl"
+		out-debug "$scriptname - Processing $computername$tbl"
 		$tmp | ForEach-Object{
 			$id = $_.Userid 
 			if (($srudb.$id).idblob) {
@@ -331,6 +344,7 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 		$tmp | export-csv -notype ($computername + $tbl)
 	}
 	
+	Out-debug "$scriptname - Normalizing SRUM tables"
 	normalize-date ($computername + '-NetworkUsage.csv') 'TimeStamp'
 	normalize-date ($computername + '-PushNotification.csv') 'TimeStamp'
 	normalize-date ($computername + '-NetworkConnection.csv') 'TimeStamp'
@@ -348,18 +362,19 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 $polfile = $scriptdir + '\parse-polfile.ps1'
 . $polfile
 write-log "Local Group Policy saved to " + ($computername + "~LocalGroupPolicy.txt")
+out-debug "$scriptname - Local Group Policy saved to " + ($computername + "~LocalGroupPolicy.txt")
 get-childitem ($windir + 'system32\grouppolicy\*.pol') -recurse | foreach-object{parse-polfile $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 get-childitem ($windir + 'system32\grouppolicy\*.xml') -recurse | foreach-object{get-content $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 
 write-log 'Getting WMI data'
-out-debug "Executing command: $wmi -i $windir  system32\wbem\repository\objects.data -o $computername ~wmi.csv)"
+out-debug "$scriptname - Executing command: $wmi -i $windir  system32\wbem\repository\objects.data -o $computername ~wmi.csv)"
 & $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi.csv') | out-debug 2> $null
-out-debug "Executing command: $wmi2 $windir system32\wbem\repository\objects.data > $computername ~wmi.txt"
+out-debug "$scriptname - Executing command: $wmi2 $windir system32\wbem\repository\objects.data > $computername ~wmi.txt"
 & $wmi2 ($windir + 'system32\wbem\repository\objects.data') > ($computername + '~wmi.txt')
 if (test-path ($windir + 'system32\wbem\repository\fs\objects.data')) {
-	out-debug "Executing command: $wmi -i $windir'system32\wbem\repository\objects.data' -o $computername'~wmi-fs.csv'"
+	out-debug "$scriptname - Executing command: $wmi -i $windir'system32\wbem\repository\objects.data' -o $computername'~wmi-fs.csv'"
 	& $wmi -i ($windir + 'system32\wbem\repository\objects.data') -o ($computername + '~wmi-fs.csv') | out-debug 2> $null
-	out-debug "Executing command: $wmi2 $windir'system32\wbem\repository\objects.data' >> $computername'~wmi.txt'"
+	out-debug "$scriptname - Executing command: $wmi2 $windir'system32\wbem\repository\objects.data' >> $computername'~wmi.txt'"
 	& $wmi2 ($windir + 'system32\wbem\repository\objects.data') >> ($computername + '~wmi.txt')
 }
 #Convert tab delimited to comma delimited
@@ -373,28 +388,29 @@ if (Get-ChildItem ($Computername + '~wmi.txt') | Where-Object length -gt 1670) {
 
 If (Test-path ($drive + '\ProgramData\Microsoft\Network\Downloader\')) {
 	write-log 'Getting BITS data'
-	out-debug "Executing command: $bits -i $drive'\ProgramData\Microsoft\Network\Downloader\' --carveall > $computername'~bits.json'"
+	out-debug "$scriptname - Executing command: $bits -i $drive'\ProgramData\Microsoft\Network\Downloader\' --carveall > $computername'~bits.json'"
 	& $bits -i ($drive + '\ProgramData\Microsoft\Network\Downloader\') --carveall > ($computername + '~bits.json')
 }
 
 If (Test-path ($windir + 'System32\LogFiles\Sum\')) {
 	write-log 'Processing Sum databases'
+	out-debug '$scriptname - Processing Sum databases'
 	mkdir SumDatabase >> $null
 	set-location SumDatabase
 	copy-item ($windir + 'System32\LogFiles\Sum\*.mdb') .
-	out-debug "Processing SystemIdentity.mdb"
+	out-debug "$scriptname - Processing SystemIdentity.mdb"
 	& $nese /table SystemIdentity.mdb 'chained_databases' /SaveDirect /scomma ($computername + '-ChainedDatabases.csv') | out-debug 
 	& $nese /table SystemIdentity.mdb 'role_ids' /SaveDirect /scomma ($computername + '-RoleIDS.csv') | out-debug 
 	mkdir Current >> $null
 	move-item current.mdb Current
 	set-location Current
-	out-debug "Processing current.mdb"
+	out-debug "$scriptname - Processing current.mdb"
 	& $nese /table current.mdb 'Clients' /SaveDirect /scomma ($computername + '-Clients.csv') | out-debug 
 	& $nese /table Current.mdb 'DNS' /SaveDirect /scomma ($computername + '-DNS.csv') | out-debug 
 	& $nese /table Current.mdb 'VIRTUALMACHINES' /SaveDirect /scomma ($computername + '-VIRTUALMACHINES.csv')| out-debug 
 	set-location ..
 	$l = import-csv ($computername + '-CHAINEDDATABASES.csv')
-	out-debug "Processing Chained Databases"
+	out-debug "$scriptname - Processing Chained Databases"
 	foreach($r in $l) {mkdir $r.year  >> $null;move-item $r.filename $r.year}
 	foreach($r in $l) {
 		set-location $r.year
@@ -415,6 +431,7 @@ if (Test-Path ($windir + 'ServiceProfiles\NetworkService\AppData\Local\Microsoft
 }
 if ($DOlogPath -ne '') {
 	write-log "Getting Delivery Optimization Logs"
+	out-debug "$scriptname - Getting Delivery Optimization Logs"
 	$outfile = $computername + '~DeliveryOptimization.csv'
 	$DOLogs = get-childitem ($DOlogPath + '\*.etl')
 	$DOLogs | Get-DOLog | export-csv -notype $outfile
@@ -426,7 +443,9 @@ if ($DOlogPath -ne '') {
 
 if ((get-item $windir).parent.name -ne 'C') {
 	write-log 'Getting Lnk Files'
+	out-debug "$scriptname - Getting LNK files"
 	$outfile = $computername + '~LnkFiles.csv'
+	out-debug "$scriptname - Executing: $leCmd -d ($drive + ':\') --csv "." --csvf $outfile"
 	& $leCmd -d ($drive + ':\') --csv "." --csvf $outfile | out-debug
 }
 
@@ -473,6 +492,7 @@ if (test-path ($windir + 'system32\dhcp')) {
 	Date: 10/8/2014
 	#>
 
+	out-debug "$scriptname - Getting DHCP Logs from $windir system32\dhcp\dhcpsrvlog*.log"
 	write-log "Getting DHCP Logs"
 	$logs = get-childitem ($windir + 'system32\dhcp\dhcpsrvlog*.log')
 	$out = @()
@@ -546,6 +566,7 @@ if (test-path ($windir + 'system32\dns')) {
 	Date: 10/8/2014
 	#>
 	write-log "Getting DNS Logs"
+	out-debug "$scriptname - Getting DNS Logs from $windir system32\dns\dns.log"
 	$out = @()
 	$log = get-content ($windir + 'system32\dns\dns.log')
 	if ($log) {
@@ -603,6 +624,7 @@ if (test-path ($windir + 'system32\dns')) {
 }
 
 write-log "Copying Registry Files"
+Out-debug "$scriptname - Copying Registry Files"
 copy-item ($windir + "system32\config\SYSTEM") .
 get-childitem ($windir + "system32\config\SYSTEM.log*") -attributes hidden | foreach-object{copy-item $_ .}
 copy-item ($windir + "system32\config\SECURITY") .
@@ -639,6 +661,7 @@ Log Locations
 \ProgramData\Malwarebytes Anti-Exploit\Logs\
 "@
 
+out-debug "$scriptname - copying other logs"
 $outstring | add-content -enc utf8 ($basedir + 'otherlogs\LogLocations.txt')
 
 if ((get-item $windir).parent.name -ne 'C') {
@@ -728,6 +751,7 @@ S-1-5-80	Service Accounts
 "@
 $outstring | add-content -enc utf8 WindowsCommonRids.txt
 
+out-debug "$scriptname - Normalizing System Data"
 Write-log 'Normalizing System Data' -fore "yellow"
 push-location $basedir
 Normalize-Date ($computername + '~AppCompatCache.csv')	'LastModifiedTimeUTC'

@@ -10,6 +10,8 @@
 #>
 #basic configuration 
 $ScriptDir = split-path -parent $MyInvocation.MyCommand.Path
+$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 #These configuration lines list the location the script will look for the auxiliarly programs - these can be changed
 #to reflect a custom configuration. The only caveat is the Eric Zimmeramn registry batch files *.reb are custom versions 

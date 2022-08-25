@@ -31,6 +31,8 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 #>
 
 . ($psscriptroot + '.\process-lib.ps1')
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -66,13 +68,14 @@ function get-regbatch {
 	
 	trap {
 		"###+++###" | out-debug
+		$scriptname | out-debug
 		$error[0] | out-debug
 		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
 	write-log "Getting $Title"
 	$batchCmd = $recmddir + $batch
 	$outfile = $computer + $out
-	out-debug "Executing Command: $recmd -d $path --bn $batchCmd --csv . --csvf $outfile"
+	out-debug "$scriptname - Executing Command: $recmd -d $path --bn $batchCmd --csv . --csvf $outfile"
 	& $recmd -d $path --bn $batchCmd --csv '.' --csvf $outfile | out-debug
 }
 
@@ -129,6 +132,7 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 
 	trap {
 		"###+++###" | out-debug
+		$scriptname | out-debug
 		$error[0] | out-debug
 		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
@@ -254,6 +258,7 @@ function get-auditinfo {
 	
 	trap {
 		"###+++###" | out-debug
+		$scriptname | out-debug
 		$error[0] | out-debug
 		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
@@ -765,6 +770,7 @@ $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
+	$scriptname | out-debug
 	$error[0] | out-debug
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
@@ -788,28 +794,27 @@ $systemdir = get-path $systemdir
 
 $userdir = get-path $userdir
 
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 write-log "Processing System Registries for $computername" -fore yellow
-out-debug "Processing SystemInfo with systeminfo.reb"
+out-debug "$scriptname - Processing SystemInfo with systeminfo.reb"
 get-regbatch -title 'SystemInfo' -computer $computername -batch 'systeminfo.reb' -path $systemdir -out '~SystemInfo.csv'
-out-debug "Processing AuditInfo with audit.reb"
+out-debug "$scriptname - Processing AuditInfo with audit.reb"
 get-regbatch -title 'AuditInfo' -computer $computername -batch 'audit.reb' -path $systemdir -out '~Audit.csv'
-out-debug "Processing Services with services.reb"
+out-debug "$scriptname - Processing Services with services.reb"
 get-regbatch -title 'Services' -computer $computername -batch 'services.reb' -path $systemdir -out '~services.csv'
-out-debug "Processing unquoted service paths"
+out-debug "$scriptname - Processing unquoted service paths"
 get-unquotedservicepaths(($computername + '~services.csv')) | export-csv -notype ($computername + '~unquotedservicepaths.csv')
 
-out-debug "Processing 'Installed User Software' with installedsoftware.reb"
+out-debug "$scriptname - Processing 'Installed User Software' with installedsoftware.reb"
 get-regbatch -title 'Installed User Software' -computer $computername -batch 'installedsoftware.reb' -path $userdir -out '~usersoftware.csv'
 
-out-debug "Processing 'Installed System Software' with installedsoftware.reb"
+out-debug "$scriptname - Processing 'Installed System Software' with installedsoftware.reb"
 get-regbatch -title 'Installed System Software' -computer $computername -batch 'installedsoftware.reb' -path $systemdir -out '~systemsoftware.csv'
 
 mkdir Shellbags  >> $null
 set-location ShellBags
 	write-log "Getting Shellbags"
-	out-debug "Executing command: & $sb -d ($userDir) --csv ."
+	out-debug "$scriptname - Executing command: & $sb -d ($userDir) --csv ."
 	& $sb -d ($userDir) --csv . | out-debug
 	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
 					move-item $_.name $csvfile
@@ -831,7 +836,7 @@ write-log "Processing  User Registries for $computername" -fore yellow
 write-log "Getting User Info from Registries"
 #get-regbatch -title 'UserSamInfo' -computer $computername -batch 'sam.reb' -path $systemdir -out '~UserSam.csv'
 
-out-debug "Processing UserActivity with userActivity.reb"
+out-debug "$scriptname - Processing UserActivity with userActivity.reb"
 get-regbatch -title 'UserActivity' -computer $computername -batch 'userActivity.reb' -path $userDir -out '~UserActivity.csv'
 
 if (get-childitem *recentdocs.csv | where-object{import-csv $_ | where-object {$_.extension -eq '.iso'}}){
@@ -854,7 +859,7 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 
 import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace '*\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
 
-out-debug "Checking for common IOCs"
+out-debug "$scriptname - Checking for common IOCs"
 $usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
 if ($usa | Where-Object {$_.ProgramName -like ('*mi"+ "mik" + "atz*')}) {
 	write-ioc "Check for mi" + "mik" + "atz usage"

@@ -37,7 +37,7 @@ $ScriptDir = split-path -parent $ScriptPath
 . ($psscriptroot + '.\process-lib.ps1')
 
 get-childitem *destinations.csv | foreach-object{
-	out-debug "Normalizing the dates for: $_.Name"
+	out-debug "$scriptname - Normalizing the dates for: $_.Name"
 	Normalize-Date $_.name 'SourceCreated' 'SourceCreated,SourceFile,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes'
 }
 
@@ -97,6 +97,7 @@ $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
+	$scriptname | out-debug
 	$error[0] | out-debug
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
@@ -114,6 +115,8 @@ if (test-path $dir) {
 	"Invalid path $dir"
 	exit
 }
+
+$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
 
 $basedir = $workingdir + '\files\'
 
@@ -151,25 +154,25 @@ $imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).addda
 
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
 start-process "$pshome\powershell.exe" -argumentlist $arg
-out-debug "Executing command: powershell.exe $arg"
+out-debug "$scriptname - Executing command: powershell.exe $arg"
 write-log "Starting Log Analysis"
 
 $script = $scriptdir + '\process-registries.ps1'
 $config = $basedir + 'c\windows\System32\config\'
 $userdir = $basedir + 'c\users'
-out-debug "Executing command: $script $computername $basedir $config $userdir $userinfo"
+out-debug "$scriptname - Executing command: $script $computername $basedir $config $userdir $userinfo"
 & $script $computername $basedir $config $userdir $userinfo
 
 $windir = $basdir + 'c\windows\'
 $script = $scriptdir + '\process-systeminfo.ps1'
-out-debug "Executing command: $script $computername $basedir $windir $userdir"
+out-debug "$scriptname - Executing command: $script $computername $basedir $windir $userdir"
 & $script $computername $basedir $windir $userdir
 
 $mftfile = $workingdir + 'files\c\$MFT'
 if (test-path $mftfile) {
 	write-log "Parsing MFT"
 	$outfile = $computername + '-mft.csv'
-	out-debug "Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
+	out-debug "$scriptname - Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
 	& $mft -f $mftfile --csv '.' --csvf $outfile  > logfile.txt
 	$mftinfo = import-csv $outfile | Where-Object {$_.LastModified0x10 -gt $imagedate}
 	$poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
@@ -183,7 +186,7 @@ if (test-path $mftfile) {
 }
 
 $script = $scriptdir + '\process-userinfo.ps1'
-out-debug "Executing command: $script $computername $basedir $userdir $userinfo"
+out-debug "$scriptname - Executing command: $script $computername $basedir $userdir $userinfo"
 & $script $computername $basedir $userdir $userinfo
 
 $tmp = get-childitem ((get-date).year.tostring() + "*")

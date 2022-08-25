@@ -31,6 +31,8 @@
 #>
 
 . ($psscriptroot + '.\process-lib.ps1')
+$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 function import-iislogs {
 <#
@@ -56,6 +58,7 @@ function import-iislogs {
 	Param([Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)][string]$Logfile)
 	trap {
 		"###+++###" | out-debug
+		$scriptname | out-debug
 		$error[0] | out-debug
 		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
@@ -74,6 +77,7 @@ $ErrorActionPreference = "SilentlyContinue"
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
+	$scriptname | out-debug
 	$error[0] | out-debug
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
