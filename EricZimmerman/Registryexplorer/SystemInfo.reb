@@ -71,6 +71,13 @@ Keys:
         Recursive: false
         Comment: 
     -
+        Description: IIS Info
+        HiveType: Software
+        Category: System Info
+        KeyPath: Microsoft\Inetstp*
+        Recursive: true
+        Comment: IIS Info
+    -
         Description: PKICiphers
         HiveType: System
         Category: System Info
