@@ -153,6 +153,11 @@ if (test-path ($inetpub + 'logs' )) {
 	$s |foreach-object{$_.'s-ip' >> s-ip.txt;$_.'c-ip' >> c-ip.txt}
 	get-content s-ip.txt | Group-Object | select-object count,name | Sort-Object count -desc > s-ip-histo.txt
 	get-content c-ip.txt | Group-Object | select-object count,name | Sort-Object count -desc > c-ip-histo.txt
+	$sqli = @()
+	$s | ForEach-Object{if($_.'cs-uri-stem' | Select-String '(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|SELECT|UPDATE|UNION( +ALL){0,1})') { $sqli += $_.'cs-uri-stem'}}
+	if ($s) {
+		write-ioc "Look at IIS Logs for SQLi"
+	}
 	pop-location
 	start-sleep -s 5
 }
