@@ -361,7 +361,7 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 
 $polfile = $scriptdir + '\parse-polfile.ps1'
 . $polfile
-write-log "Local Group Policy saved to $computername~LocalGroupPolicy.txt")
+write-log "Local Group Policy saved to $computername~LocalGroupPolicy.txt"
 out-debug "$scriptname - Local Group Policy saved to " + ($computername + "~LocalGroupPolicy.txt")
 get-childitem ($windir + 'system32\grouppolicy\*.pol') -recurse | foreach-object{parse-polfile $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
 get-childitem ($windir + 'system32\grouppolicy\*.xml') -recurse | foreach-object{get-content $_ | out-file ($computername + '~LocalGroupPolicy.txt') -append}
