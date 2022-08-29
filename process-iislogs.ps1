@@ -82,12 +82,22 @@ trap {
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
 
+$drive = $inetpub[0]
+if (test-path ($drive + ":\Windows\system32\inetsrv\config\applicationHost.config")) {
+	[xml]$iisconfig = gc ($drive + ":\windows\system32\inetsrv\config\applicationHost.config")
+	$iislogdir = $iisconfig.configuration.'system.applicationhost'.log.centralbinarylogfile.directory
+	$iislogdir = $iislogdir -replace '\%SystemDrive\%',($drive + ':')
+} else {
+	$iislogdir = $drive + ':\inetpub\logs\logFiles\'
+}
+
 if ($debug) {
 	out-debug "Process-iislogs.ps1"
 	out-debug "Parameters:"
 	out-debug "Computername = $Computername"
 	out-debug "Basedir = $basedir"
 	out-debug "Inetpub = $inetpub"
+	out-debug "IISLogdir = $iislogdir"
 	out-debug "HTTPErr = $httperr"
 	out-debug "logdir = $logdir"
 }
@@ -114,53 +124,51 @@ Push-Location $basedir
 
 (get-date).tostring("yyyy-MM-dd HH:mm") + ' - Processing IIS Logs' | out-debug
 
-
-if (test-path ($inetpub + 'logs' )) {
+if (test-path ($iislogdir)) {
 	write-log "Copying IIS Logs" "yellow"
 	if (test-path $logdir) {
 		$iislogs = get-path $logdir
 	} else {
 		$iislogs = get-path 'iislogs'
 	}
-	copy-item -Recurse ($inetpub + 'logs\*') $iislogs
-	copy-item -Recurse ($httperr + 'httperr\*') $iislogs
+	get-childitem $iislogdir | %{copy-item -recurse $_.fullname $iislogs}
+	mkdir ($iislogs + 'HTTPERR')
+	copy-item -Recurse ($httperr + 'httperr\*') ($iislogs + 'HTTPERR')
 #######
 	write-log "Processing IIS Logs" "yellow"
-	if (test-path 'iislogs\LogFiles') {
-		push-location iislogs\LogFiles
-	} else {
-		push-location iislogs
+	$il = Get-ChildItem $iislogs
+	$il | foreach-object {
+		trap {
+			"###+++###" | out-debug
+			$scriptname | out-debug
+			$error[0] | out-debug
+			($PSItem.InvocationInfo).positionmessage | out-debug
+		}
+		write-log "Converting $_ logs to CSV"
+		set-location $_.fullname
+		$iiscsv = get-path 'csv'
+		set-location $iiscsv
+		get-childitem ..\*.log -recurse | foreach-object{Import-IISLogs $_.fullname}
+		set-location $iislogs
+		$logscsv = dir $iiscsv
+		$fields = gc $logscsv[1].fullname -head 1
+		$fields = $fields -replace '"time",',''
+		$outcsv = $iislogs + $_.name + '.csv'
+		write-log "Gathering all the CSV for $_ into $outcsv"
+		$logscsv | foreach-object {
+			$tmpcsv = import-csv $_.fullname
+			$tmpcsv | foreach-object{$_.date = $_.date + ' ' + $_.time}
+			$tmpcsv | select-object ($fields -split ',') | export-csv -notype -append $outcsv
+		}
+		$sqli = @()
+		Write-log "Looking at $_ for possible SQLi"
+		write-debug "Looking for possible SQLI in $_ ALTER, CREATE, DELETE, DROP, EXEC(UTE), INSERT( +INTO), MERGE, SELECT, UPDATE, UNION( +ALL)"
+		import-csv $outcsv | ForEach-Object{if($_.'cs-uri-stem' | Select-String '(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|SELECT|UPDATE|UNION( +ALL){0,1})') { $sqli += $_.'cs-uri-stem'}}
+		if ($sqli) {
+			write-ioc "Looking at $_ IIS Logs for SQLi"
+		}
 	}
-	$iiscsv = get-path 'csv'
-	out-debug "iiscsv = $iiscsv"
-	set-location $iiscsv
-	write-log "Converting to CSV"
-	get-childitem ..\*.log -recurse | foreach-object{Import-IISLogs $_.fullname}
-	write-log "Gathering Logs together"
-	get-childitem * | foreach-object{$s = import-csv $_.fullname
-				$s | export-csv -notype -append ('..\tmp.csv')
-			}
-	set-location ..
-
-	$s = import-csv tmp.csv
-	$s | foreach-object{$_.date = $_.date + ' ' + $_.time}
-	$fields = get-content tmp.csv -head 1
-	$fields = $fields -replace '"time",',''
-	$fields = $fields -replace '"',''
-	$s | select-object ($fields -split ',') | export-csv -notype ($computername + '~IISLogs.csv')
-	remove-item temp.csv
-	write-log "Analyzing IIS Logs"
-	$s |foreach-object{$_.'s-ip' >> s-ip.txt;$_.'c-ip' >> c-ip.txt}
-	get-content s-ip.txt | Group-Object | select-object count,name | Sort-Object count -desc > s-ip-histo.txt
-	get-content c-ip.txt | Group-Object | select-object count,name | Sort-Object count -desc > c-ip-histo.txt
-	$sqli = @()
-	$s | ForEach-Object{if($_.'cs-uri-stem' | Select-String '(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|SELECT|UPDATE|UNION( +ALL){0,1})') { $sqli += $_.'cs-uri-stem'}}
-	if ($s) {
-		write-ioc "Look at IIS Logs for SQLi"
-	}
-	pop-location
 	start-sleep -s 5
 }
 
 (get-date).tostring("yyyy-MM-dd HH:mm") + ' - Finished processing IIS Logs' | out-debug
-pop-location
