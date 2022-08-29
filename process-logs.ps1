@@ -426,6 +426,15 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		write-ioc "Microsoft Defender detected Meterpreter"
 	}
 	$t = import-csv ($csvdir + ($computername + '~Windows PowerShell.csv'))
+	if ($t | Where-Object {$_.event -like '*bloodhound*'}) {
+		write-ioc "Check for bloodhound usage."
+	}
+	if ($t | Where-Object {$_.event -like '*invoke-sluibypass*'}) {
+		write-ioc "Check for invoke-sluibypass usage."
+	}
+	if ($t | Where-Object {$_.event -like '*uac-tokenmagic*'}) {
+		write-ioc "Check for uac-tokenmagic usage."
+	}
 	if ($t | Where-Object {$_.event -like '*DisableRealtimeMonitoring*'}) {
 		write-ioc "Check for Defender set to DisableRealtimeMonitoring"
 	}
@@ -433,6 +442,12 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		write-ioc "Check for DSInternals usage."
 	}
 	$ns = (import-csv ($csvdir + $computername + '~System.csv')) | Where-Object {$_.Eventid -eq '7045'}
+	if ($ns | Where-Object {$_.event -like '*ehorus*'}) {
+		write-ioc "Check ehorus usage"
+	}
+	if ($ns | Where-Object {$_.event -like '*anydesk*'}) {
+		write-ioc "Check anydesk usage"
+	}
 	if ($ns | Where-Object {$_.event -like '*screenconnect*'}) {
 		write-ioc "Check ScreenConnect usage"
 	}
