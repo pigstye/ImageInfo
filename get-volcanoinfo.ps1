@@ -36,11 +36,6 @@ $ScriptDir = split-path -parent $ScriptPath
 #basic configuration 
 . ($psscriptroot + '.\process-lib.ps1')
 
-get-childitem *destinations.csv | foreach-object{
-	out-debug "$scriptname - Normalizing the dates for: $_.Name"
-	Normalize-Date $_.name 'SourceCreated' 'SourceCreated,SourceFile,SourceModified,SourceAccessed,AppId,AppIdDescription,DestListVersion,LastUsedEntryNumber,MRU,EntryNumber,CreationTime,LastModified,Hostname,MacAddress,Path,InteractionCount,PinStatus,FileBirthDroid,FileDroid,VolumeBirthDroid,VolumeDroid,TargetCreated,TargetModified,TargetAccessed,FileSize,RelativePath,WorkingDirectory,FileAttributes,HeaderFlags,DriveType,VolumeSerialNumber,VolumeLabel,LocalPath,CommonPath,TargetIDAbsolutePath,TargetMFTEntryNumber,TargetMFTSequenceNumber,MachineID,MachineMACAddress,TrackerCreatedOn,ExtraBlocksPresent,Arguments,Notes'
-}
-
 function get-computername {
 	<#
 	.Synopsis
@@ -55,15 +50,6 @@ function get-computername {
 	write-host $computername
 	$computername
 }
-
-function write-log {
-	param([Parameter(Mandatory=$True)][string]$msg,[Parameter(Mandatory=$false)][string]$fore="white")
-	$msglog = $basedir + '\ProgressLog.txt'
-	$dte = get-date
-	write-host $msg -fore $fore
-	$dte.tostring("M-d-yyyy h:m") + ' - ' + $msg | add-content $msglog
-}
-
 
 #api conversion functions
 function convertfrom-json2-csv {
@@ -105,23 +91,32 @@ trap {
 #########
 if (test-path $dir) {
 	set-location $dir
-	$workingdir = (get-location).path + '\'
+	$workingdir = get-path (get-location).path
 	$computername = get-computername
 	set-location ..
 	rename-item $workingdir $computername
 	set-location $computername
-	$workingdir = (get-location).path + '\'
+	$workingdir = get-path (get-location).path
 } else {
-	"Invalid path $dir"
+	write-host "Invalid path $dir" -fore red
+	out-debug "Invalid path $dir"
 	exit
 }
 
 $ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
 
-$basedir = $workingdir + '\files\'
+$basedir = get-path ($workingdir + 'files')
+$logdir = get-path ($basedir + 'c\windows\system32\winevt\logs\')
+$userinfo = get-path ($basedir + 'UserInfo')
 
-write-log "Processing Volcano at $workingdir"
+out-debug "computername = $computername"
+out-debug "workingdir = $workingdir"
+out-debug "basedir = $basedir"
+out-debug "logdir = $logdir"
 
+write-log "Processing Volcano at $workingdir" Green
+
+write-log "Processing API jsons"
 push-location API
 foreach($api in $api0) {
 	convertfrom-json0-txt $api
@@ -136,17 +131,14 @@ copy-item CreateToolhelp32Snapshot_TH32CS_SNAPPROCESS.csv ('..\files\' + $comput
 copy-item GetExtendedTcpTable.csv ('..\files\' + $computername + '-networkconnections.csv')
 pop-location
 
-push-location files
-
-mkdir 'userinfo' >> $null
-$userinfo = (get-item 'userinfo').fullname
-if (-not $userinfo.endswith('\')){$userinfo += '\'}
+push-location $basedir
+out-debug "$basedir is location now"
 
 $host.ui.RawUI.WindowTitle="Processing Volcano output for $computername"
 
-$logdir = $basedir + 'c\windows\system32\winevt\logs\'
 $script = $scriptdir + '\process-logs.ps1'
 
+out-debug "Setting ImageDate"
 [datetime]::parse((get-date)).tostring('yyyy-MM-dd HH:mm:ss') | set-content ($basedir + 'ImageDate.txt')
 $s = (get-childitem $logdir).lastwritetime
 ($s | sort-object)[$s.length-1] | set-content ($basedir + 'ImageDate.txt')
@@ -168,23 +160,6 @@ $script = $scriptdir + '\process-systeminfo.ps1'
 out-debug "$scriptname - Executing command: $script $computername $basedir $windir $userdir"
 & $script $computername $basedir $windir $userdir
 
-$mftfile = $workingdir + 'files\c\$MFT'
-if (test-path $mftfile) {
-	write-log "Parsing MFT"
-	$outfile = $computername + '-mft.csv'
-	out-debug "$scriptname - Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
-	& $mft -f $mftfile --csv '.' --csvf $outfile  > logfile.txt
-	$mftinfo = import-csv $outfile | Where-Object {$_.LastModified0x10 -gt $imagedate}
-	$poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
-	if ($poc.length -gt 0) {
-			write-ioc "Check the executables in the root of c:\ProgramData"
-	}
-	$poc = $mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
-	if ($poc.length -gt 0) {
-			write-ioc "Check the executables in c:\Users\Public\"
-	}
-}
-
 $script = $scriptdir + '\process-userinfo.ps1'
 out-debug "$scriptname - Executing command: $script $computername $basedir $userdir $userinfo"
 & $script $computername $basedir $userdir $userinfo
@@ -199,5 +174,86 @@ move-item (".\" + $tmp.Name + "\*") .
 remove-item -recurse (".\" + $tmp.Name)
 pop-location
 
+set-location $basedir
+
+$mftfile = $basedir+ 'c\$MFT'
+if (test-path $mftfile) {
+	write-log "Parsing MFT"
+	$outfile = $basedir + $computername + '~mft.csv'
+	out-debug "$scriptname - Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
+	& $mft -f $mftfile --csv '.' --csvf $outfile  | out-debug
+	Normalize-Date $outfile 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
+	
+	$mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {[datetime]::parse($_.LastModified0x10) -gt $imagedate}
+	$poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
+	if ($poc.length -gt 0) {
+			write-ioc "Check the executables in the root of c:\ProgramData"
+	}
+	if ($mftinfo | Where-Object {$_.ParentPath -like '.\Users\Public*' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}) {
+			write-ioc "Check the executables in c:\Users\Public\"
+	}
+	$mftinfo = import-csv ($computername + '~mft.csv')
+	if ($mftinfo | where-object {$_.FileName -eq 'Adfind.exe'}) {
+		write-ioc "Check for Adfind.exe"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*kerberoast*'}) {
+		write-ioc "Check for invoke-kerberoast.ps1"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*rufus*'}) {
+		write-ioc "Check for rufus.exe"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*netscan*'}) {
+		write-ioc "Check for netscan.exe"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*PowerSploit*'}) {
+		write-ioc "Check for PowerSploit"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*proxifier*'}) {
+		write-ioc "Check for Proxifier"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*PowerUpSQL*'}) {
+		write-ioc "Check for PowerUpSQL"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*rclone*'}) {
+		write-ioc "Check for rclone"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*routerscan*'}) {
+		write-ioc "Check for Routerscan"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*ShareFinder*'}) {
+		write-ioc "Check for invoke-sharefinder.ps1"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*SMBAutoBrute*'}) {
+		write-ioc "Check for SMBAutoBrute"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*pchunter*'}) {
+		write-ioc "Check for pchunter"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*Powertool*'}) {
+		write-ioc "Check for Powertool"
+	}
+	if ($mftinfo | where-object {$_.FileName -like '*net-gpppassword*'}) {
+		write-ioc "Check for Net-GPPPassword.exe"
+	}
+}
+
 set-location ..\..
+write-log "Finished Main Processing"
 write-log "Finished processing $computername except for logs" -fore yellow
+
+function Haiku {
+	$num = get-random(3,2,1)
+	write-host ""
+	switch ($num) {
+		1 {write-host "my work is finished" -fore red
+			write-host "you must unravel the mystery" -fore red
+			write-host "your work begins now" -fore red}
+		2 {write-host "When the wind blows hard" -fore red
+			write-host "The nuts fall from the tree" -fore red
+			write-host "Collect all the nuts" -fore red}
+		3 {write-host "bits and bytes mixed up" -fore red
+			write-host "they are now put in order"  -fore red
+			write-host "find the answer here" -fore red}
+	}
+}
+Haiku

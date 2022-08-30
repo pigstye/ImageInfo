@@ -132,7 +132,6 @@ copy-item $evtlogs $logdir
 
 $s = (get-childitem $logdir).lastwritetime
 ($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
-
 $imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
 
 $script = $scriptdir + '\process-logs.ps1'
@@ -193,9 +192,9 @@ out-debug "$script $computername $basedir $userdir $userinfo"
 
 set-location $basedir
 Write-Log 'Exporting MFT'
-($basedir + $computername + '~mft.csv')
-& $mft -f ($drive + ':\$MFT') --csv $basedir --csvf ($computername + '~mft.csv')
-Normalize-Date ($computername + '~mft.csv') 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
+$outfile = ($basedir + $computername + '~mft.csv')
+& $mft -f ($drive + ':\$MFT') --csv $basedir --csvf $outfile | out-debug
+Normalize-Date $outfile 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
 $mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {[datetime]::parse($_.LastModified0x10) -gt $imagedate}
 $poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
