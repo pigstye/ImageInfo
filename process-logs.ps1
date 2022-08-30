@@ -581,7 +581,7 @@ push-location $basedir
 mkdir logs-csv >> $null
 mkdir logsearches >> $null
 $logcsv = $computername + '-logs.csv'
-get-childitem $logfiles | foreach-object{write-log "Processing: $_"
+get-childitem -path $logfiles -filter '*.evt*' | foreach-object{write-log "Processing: $_"
 		trap {
 			"###+++###" | out-debug
 			$scriptname | out-debug
