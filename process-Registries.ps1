@@ -834,7 +834,7 @@ set-location $userinfo
 write-log "Processing  User Registries for $computername" -fore yellow
 
 write-log "Getting User Info from Registries"
-#get-regbatch -title 'UserSamInfo' -computer $computername -batch 'sam.reb' -path $systemdir -out '~UserSam.csv'
+get-regbatch -title 'UserSamInfo' -computer $computername -batch 'sam.reb' -path $systemdir -out '~UserSam.csv'
 
 out-debug "$scriptname - Processing UserActivity with userActivity.reb"
 get-regbatch -title 'UserActivity' -computer $computername -batch 'userActivity.reb' -path $userDir -out '~UserActivity.csv'
