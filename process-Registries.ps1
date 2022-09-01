@@ -29,10 +29,12 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 <#
   Configuration Information
 #>
-
-. ($psscriptroot + '.\process-lib.ps1')
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
+#basic configuration 
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -767,6 +769,9 @@ function Format-HumanReadable([Parameter(Mandatory = $True)][int]$size) {
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
+write-log "$ScriptName - V $Version"
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
@@ -816,17 +821,8 @@ set-location ShellBags
 	write-log "Getting Shellbags"
 	out-debug "$scriptname - Executing command: & $sb -d ($userDir) --csv ."
 	& $sb -d ($userDir) --csv . | out-debug
-	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
-					move-item $_.name $csvfile
-					Normalize-Date $csvfile 'LastInteracted,FirstInteracted,LastWriteTime'
-				}
 	get-childitem * |foreach-object{$g = $_.name | select-string '(^.*?~).*?Users(_.*)';$t = $g.matches.groups[1].value + 'Shellbags' + $g.matches.groups[2].value;move-item $_.name $t}
 	get-childitem * | where-object length -eq 0 | remove-item
-	get-childitem *.csv | ForEach-Object{$sbs += import-csv $_ | Where-Object {[datetime]::parse($_.Lastinteracted) -ge $imagedate}}
-	if ($sbs) {
-		$sbs | export-csv -notype ($computername + '~RecentShellbags.csv')
-		write-ioc ('Check ' + $computername + '~RecentShellbags for activity.')
-	}
 set-location ..
 
 set-location $userinfo
@@ -838,12 +834,6 @@ get-regbatch -title 'UserSamInfo' -computer $computername -batch 'sam.reb' -path
 
 out-debug "$scriptname - Processing UserActivity with userActivity.reb"
 get-regbatch -title 'UserActivity' -computer $computername -batch 'userActivity.reb' -path $userDir -out '~UserActivity.csv'
-
-if (get-childitem *recentdocs.csv | where-object{import-csv $_ | where-object {$_.extension -eq '.iso'}}){
-	write-ioc "ISO files have been opened - check *recentDocs.csv files"
-}
-
-
 set-location ..
 
 get-systeminfo $computername $basedir $userinfo $userdir
@@ -859,7 +849,35 @@ get-childitem ((get-date).year.tostring() + "*") | foreach-object{
 
 import-csv ($computername + '~UserActivity.csv') | where-object {$_.valuename -eq 'RemotePath'} | select-object @{Name='User';Expression={$u = $_.HivePath -replace '\\NTUSER.DAT','';$u.substring($u.lastindexof('\')+1)}},@{Name='Drive';Expression={$_.keypath -replace '*\\Network\\',''}},@{Name="Path";Expression={$_.valuedata}} | export-csv -notype ($computername + '~mappedDrives.csv')
 
-out-debug "$scriptname - Checking for common IOCs"
+
+set-location $basedir
+
+$gpu = import-csv ($computername + '~SystemInfo.csv') | Where-Object {$_.KeyPath -like "ROOT\Microsoft\Windows\CurrentVersion\Group Policy\DataStore\S*\0" -and $_.valuename -eq 'szName'}
+
+$out = ($computername + '-GroupPolicyUsers.txt')
+"Group Policy Users" | add-content $out
+$gpu | foreach-object {$len = $_.keypath.lastindexof('\')-61;$_.ValueData + ' - ' + $_.keypath.substring(61,$len) | add-content $out}
+
+get-childitem ((get-date).year.tostring() + "*") | foreach-object{
+	copy-item (".\" + $_.Name + "\*") .
+	remove-item -recurse (".\" + $_.Name)
+}
+set-location $basedir
+########## Check for IOCs ###########
+write-log "$scriptname - Checking for IOCs" -fore "Green"
+write-log "$scriptname - Checking for ISOs being opened" -fore "Yellow"
+if (get-childitem ($userinfo + '*recentdocs.csv') | where-object{import-csv $_ | where-object {$_.extension -eq '.iso'}}){
+	write-ioc "ISO files have been opened - check *recentDocs.csv files"
+}
+write-log "Gathering Recent Shellbags" -fore "Yellow"
+get-childitem 'shellbags\*.csv' | ForEach-Object{$sbs += import-csv $_ | Where-Object {[datetime]::parse($_.Lastinteracted) -ge $imagedate}}
+if ($sbs) {
+	$sbs | export-csv -notype ($computername + '~RecentShellbags.csv')
+	write-ioc ('Check ' + $computername + '~RecentShellbags for activity.')
+}
+
+write-log "$scriptname - Checking for common IOCs in Registries" -fore "Yellow"
+write-log "$scriptname - Checking for common IOCs in UserAssist" -fore "Yellow"
 $usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
 if ($usa | Where-Object {$_.ProgramName -like ('*mi"+ "mik" + "atz*')}) {
 	write-ioc "Check for mi" + "mik" + "atz usage"
@@ -873,7 +891,7 @@ if ($usa | Where-Object {$_.ProgramName -like ('*gme' + 'r*.exe*')}) {
 if ($usa | Where-Object {$_.ProgramName -like ('*anx' + 'insec*.exe*')}) {
 	write-ioc "Check for *anxinsec.exe activity"
 }
-
+write-log "$scriptname - Checking for common IOCs in System Registry" -fore "Yellow"
 $sinfo = import-csv ($basedir + $computername + '~SystemInfo.csv')
 if ($sinfo | Where-Object {$_.keypath -like '*Image File Execution Options*' -and $_.ValueName -eq 'Debugger'}) {
 	write-ioc "Check for Debugger Key on Image File Execution Options"
@@ -903,6 +921,7 @@ if ($sinfo | where-object {$_.keypath -like '*\Microsoft\Windows NT\CurrentVersi
 	write-ioc "Check Winlogon MPnotify property - It is not standard"
 }
 
+write-log "$scriptname - Checking for common IOCs in Services" -fore "Yellow"
 $svcinfo = import-csv ($basedir + $computername + '~Services.csv')
 if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -like '*tmp*'}){
 	write-ioc "Check Service running from tempory path"
@@ -917,14 +936,21 @@ if ($svcinfo | where-object {$_.ValueName -eq 'ImagePath' -and $_.valuedata -lik
 	write-ioc "Check service running from User Directory"
 }
 
+write-log "$scriptname - Checking for common IOCs in User Registries" -fore "Yellow"
 $uinfo = import-csv ($userinfo + $computername + '~useractivity.csv')
 if ($uinfo | where-object {($_.keypath -eq '*\SOFTWARE\Microsoft\Windows\CurrentVersion\Run' -or $_.keypath -eq '*\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce') -and [datetime]::parse($_.LastWriteTimestamp) -gt $imagedate}) {
 	write-ioc "Check User Run Keys"
 }
 
 
-
-write-log 'Normalizing Data' -fore green
+######### Normalize Dates ###########
+set-location ShellBags
+	write-log "Normalizing Dates on Shellbags" -fore "Green"
+	get-childitem *.csv | foreach-object{$csvfile = $computername + '~' + $_.name
+					Normalize-Date $csvfile 'LastInteracted,FirstInteracted,LastWriteTime'
+				}
+set-location $userinfo
+write-log "$scriptname - Normalizing Dates in Userinfo" -fore green
 Normalize-Date ($computername + '~mappedDrives.csv') ""
 Normalize-Date ($computername + '~UserActivity_FileExts.csv') ''
 Normalize-Date ($computername + '~UserActivity.csv') 'LastWriteTimeStamp'
@@ -942,20 +968,7 @@ Normalize-Date ($computername + '~UserActivity_UserAssist.csv') 'LastExecuted'
 Normalize-Date ($computername + '~UserActivity_WordWheelQuery.csv') 'LastWriteTimestamp'
 Normalize-Date ($computername + '~UserActivity_TerminalServerClient.csv') 'LastModified'
 Normalize-Date ($computername + '~UserActivity_Taskband.csv') ''
-
 set-location $basedir
-
-$gpu = import-csv ($computername + '~SystemInfo.csv') | Where-Object {$_.KeyPath -like "ROOT\Microsoft\Windows\CurrentVersion\Group Policy\DataStore\S*\0" -and $_.valuename -eq 'szName'}
-
-$out = ($computername + '-GroupPolicyUsers.txt')
-"Group Policy Users" | add-content $out
-$gpu | foreach-object {$len = $_.keypath.lastindexof('\')-61;$_.ValueData + ' - ' + $_.keypath.substring(61,$len) | add-content $out}
-
-get-childitem ((get-date).year.tostring() + "*") | foreach-object{
-	copy-item (".\" + $_.Name + "\*") .
-	remove-item -recurse (".\" + $_.Name)
-}
-
 Normalize-Date ($computername + '~unquotedservicepaths.csv') '' 
 Normalize-Date ($computername + '~SystemInfo_TimeZoneInfo.csv') ''
 Normalize-Date ($computername + '~SystemInfo_MountedDevices.csv') ''

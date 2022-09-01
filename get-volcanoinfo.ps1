@@ -26,15 +26,15 @@
 
 Param([String][Parameter(Mandatory=$true)]$Dir)
 
-#lab setup
-$ScriptPath = $MyInvocation.MyCommand.Path
-$ScriptDir = split-path -parent $ScriptPath
-
 <#
   Configuration Information
 #>
 #basic configuration 
-. ($psscriptroot + '.\process-lib.ps1')
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
 function get-computername {
 	<#
@@ -78,8 +78,10 @@ $api1 = 'RtlGetVersion','CreateToolhelp32Snapshot_TH32CS_SNAPPROCESS','DnsGetCac
 $api2 = 'GetDriveType','GetSystemDEPPolicy','GetTickCount64','NtQuerySystemInformation'
 
 # And it begins
-
+#########
 $ErrorActionPreference = "SilentlyContinue"
+write-log "$ScriptName - V $Version"
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
@@ -182,8 +184,11 @@ if (test-path $mftfile) {
 	$outfile = $basedir + $computername + '~mft.csv'
 	out-debug "$scriptname - Executing command: $mft -f $mftfile --csv '.' --csvf $outfile"
 	& $mft -f $mftfile --csv '.' --csvf $outfile  | out-debug
+	######### Normalizing Dates in MFT ########
+	write-log "$scriptname - Normalizing dates in MFT" -fore "Green"
 	Normalize-Date $outfile 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
-	
+	######### Searching for IOCs in MFT ########
+	write-log "$scriptname - Searching for IOCs in MFT" -fore "Green"
 	$mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {[datetime]::parse($_.LastModified0x10) -gt $imagedate}
 	$poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 	if ($poc.length -gt 0) {

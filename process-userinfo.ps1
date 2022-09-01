@@ -22,10 +22,11 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 <#
   Configuration Information
 #>
-
-. ($psscriptroot + '.\process-lib.ps1')
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -36,6 +37,9 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
+write-log "$ScriptName - V $Version"
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
@@ -146,11 +150,19 @@ foreach ($user in $users) {
 		& $wtxcmd -f $profile1 --csv $d
 	}
 
+}
+
+####### Check for IOCs ########
+write-log "$scriptname - Checking for IOCs" -fore "Green"
+foreach ($user in $users) {
+	trap {
+		"###+++###" | out-debug
+		$scriptname | out-debug
+		$error[0] | out-debug
+		($PSItem.InvocationInfo).positionmessage | out-debug
+	}
 	$PowerShellLog = '\AppData\roaming\Microsoft\Windows\PowerShell\psreadline\consolehost_history.txt'
 	if (test-path ($userdir + $user + $PowerShellLog)) {
-		write-log "Getting $user PowerShell Log"
-		$outfile = $computername + '~' + $user + '_PowerShellLog.txt'
-		copy-item ($userdir + $user + $PowerShellLog) $outfile
 		write-ioc "Review PowerShell log for user $user"
 	}
 
@@ -158,17 +170,19 @@ foreach ($user in $users) {
 	if (Get-ChildItem ($userdir + $user + $startup)) {
 		write-IOC "Check User Startup directory for $user."
 	}
-
 }
-
-$uas = import-csv ($userdir + $computername + '~UserActivity_UserAssist.csv') | Where-Object {[datetime]::parse($_.LastExecuted) -gt $imagedate}
+$uas = import-csv ($userinfo + $computername + '~UserActivity_UserAssist.csv') | Where-Object {[datetime]::parse($_.LastExecuted) -gt $imagedate}
 if ($uas.length -gt 0) {
 	write-ioc ("Check " + $computername + '~UserActivity_UserAssist.csv' + " for activity.")
 }
-$tsc = import-csv ($userdir + $computername + '~UserActivity_TerminalServerClient.csv') | Where-Object {[datetime]::parse($_.LastModified) -gt $imagedate}
+$tsc = import-csv ($userinfo + $computername + '~UserActivity_TerminalServerClient.csv') | Where-Object {[datetime]::parse($_.LastModified) -gt $imagedate}
 if ($tsc.length -gt 0){
 	write-ioc ("Check " + $computername + '~UserActivity_TerminalServerClient.csv' + ' for activity.') 
 }
+
+###### Normalize Dates #######
+set-location $userinfo
+write-log "$scriptname - Normalizing Dates" -fore "Green"
 get-childitem *_ChromeCookies.csv	| foreach-object{Normalize-Date $_.name 'Last Accessed,Created On,Expires'}
 get-childitem *_Chromehistory.csv	| foreach-object{Normalize-Date $_ 'Visited On'}
 get-childitem *_EdgeCookies.csv | foreach-object{Normalize-Date $_ 'Modified Time,Expire Time'}
@@ -180,4 +194,4 @@ get-childitem *destinations.csv | foreach-object{Normalize-Date $_.name 'SourceC
 get-childitem * | where-object { $_.length -eq 0} | remove-item
 
 write-log 'Finished User Info Processing'
-pop-location
+set-location $basedir

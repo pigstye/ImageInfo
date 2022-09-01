@@ -24,10 +24,11 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 <#
   Configuration Information
 #>
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
-
-. ($psscriptroot + '.\process-lib.ps1')
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
 function Get-DOLog {
 <#
@@ -177,6 +178,9 @@ function get-task {
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
+write-log "$ScriptName - V $Version"
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
@@ -228,17 +232,6 @@ write-log "Getting Browser History"
 $outfile = $computername + '~browserhistory.csv'
 out-debug "$scriptname - Executing command: $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)"
 & $bhv e /scomma $outfile /HistorySource 3 /HistorySourceFolder ($userDir)  | out-debug
-$brh = import-csv $outfile
-if ($brh | where-object{$_.url -like "*ngrok*"}){
-	write-ioc "Check for NGROK usage."
-}
-if ($brh | where-object{$_.url -like "*pCloud*"}){
-	write-ioc "Check for pCloud usage."
-}
-if ($brh | where-object{$_.url -like "*mega.nz*"}){
-	write-ioc "Check for uploads to Mega.nz."
-}
-
 
 write-log "Getting Application Crash Info"
 $outfile = $computername + '~AppCrash.txt'
@@ -250,22 +243,6 @@ $outfile = $computername + '~ScheduledTasks.csv'
 $taskdir = $windir + 'system32\tasks'
 get-childitem $taskdir -recurse -file | foreach-object{get-task $_.fullname | export-csv -notype -append $outfile}
 
-## Looking for possible persistence
-$st = import-csv $outfile 
-if ($st | Where-Object {$_.Actions -like '*.ps1*'}) {
-	write-ioc "Check for Scheduled Task running a PowerShell script"
-}
-# Too noisy
-#if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
-#	write-ioc "Check for Scheduled Task running a Visual Basic Script (.vbs)"
-#}
-if ($st | Where-Object {$_.Actions -like '*plink*'}) {
-	write-ioc "Check for Scheduled Task running plink"
-}
-$stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge $imagedate}).length
-if ($stnum -gt 0) {
-	write-ioc "$stnum New Scheduled tasks in last 30 days."
-}
 
 write-log 'Getting Prefetch'
 $outfile = $computername + '~Prefetch.csv'
@@ -274,7 +251,7 @@ out-debug "$scriptname - Executing command: $pecmd -d $windir'prefetch' --csv . 
 
 if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	write-log 'Getting SRUM data'
-	out-debug '$scriptname - Getting SRUM data'
+	out-debug "$scriptname - Getting SRUM data"
 	mkdir Srum  >> $null
 	set-location srum
 	$sdb = ($windir + 'system32\sru\srudb.dat')
@@ -344,16 +321,6 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 		$tmp | export-csv -notype ($computername + $tbl)
 	}
 	
-	Out-debug "$scriptname - Normalizing SRUM tables"
-	normalize-date ($computername + '-NetworkUsage.csv') 'TimeStamp'
-	normalize-date ($computername + '-PushNotification.csv') 'TimeStamp'
-	normalize-date ($computername + '-NetworkConnection.csv') 'TimeStamp'
-	normalize-date ($computername + '-TimelineProvider.csv') 'TimeStamp'
-	normalize-date ($computername + '-AppResourceInfo.csv') 'TimeStamp'
-	normalize-date ($computername + '-EnergyUsage-LongTerm.csv') 'TimeStamp'
-	normalize-date ($computername + '-EnergyUsage.csv') 'TimeStamp'
-	normalize-date ($computername + '-Vfuprov.csv') 'TimeStamp'
-
 	set-location ..
 } else {
 	write-log "Did not find SRUM data"
@@ -381,10 +348,6 @@ if (test-path ($windir + 'system32\wbem\repository\fs\objects.data')) {
 import-csv ($computername + '~wmi.csv') -delim "`t" | export-csv -notype tmp.csv
 remove-item ($computername + '~wmi.csv')
 move-item tmp.csv ($computername + '~wmi.csv')
-## Check for possible issuss
-if (Get-ChildItem ($Computername + '~wmi.txt') | Where-Object length -gt 1670) {
-	write-ioc "Check $Computername~wmi.txt"
-}
 
 If (Test-path ($drive + '\ProgramData\Microsoft\Network\Downloader\')) {
 	write-log 'Getting BITS data'
@@ -618,7 +581,6 @@ if (test-path ($windir + 'system32\dns')) {
 	}
 	$out | foreach-object{$_.TimeStamp = [datetime]::parse($_.date + ' ' + $_.time).tostring('yyyy-MM-dd HH:mm:ss')} -ErrorAction SilentlyContinue
 	$out | select-object TimeStamp,Protocol,Client,SendReceive,QueryType,RecordType,Query,Result | export-csv -notype ($computername + '~dnslogs.csv')
-	Normalize-Date ($computername + '~dnslogs.csv') 'TimeStamp'
 } else {
 	write-log 'DNS Logs not Found'
 }
@@ -751,9 +713,60 @@ S-1-5-80	Service Accounts
 "@
 $outstring | add-content -enc utf8 WindowsCommonRids.txt
 
-out-debug "$scriptname - Normalizing System Data"
-Write-log 'Normalizing System Data' -fore "yellow"
-push-location $basedir
+######### Check for IOCs ###########
+set-location $basedir
+Write-log "$scriptname - Checking for IOCs" -fore "Green"
+write-log "$scriptname - Checking Browser History for IOCs" -fore "Yellow"
+$brh = import-csv ($computername + '~browserhistory.csv')
+if ($brh | where-object{$_.url -like "*ngrok*"}){
+	write-ioc "Check for NGROK usage."
+}
+if ($brh | where-object{$_.url -like "*pCloud*"}){
+	write-ioc "Check for pCloud usage."
+}
+if ($brh | where-object{$_.url -like "*mega.nz*"}){
+	write-ioc "Check for uploads to Mega.nz."
+}
+write-log "$scriptname - Checking Scheduled Tasks for persistence" -fore "Yellow"
+$st = import-csv ($computername + '~ScheduledTasks.csv') 
+if ($st | Where-Object {$_.Actions -like '*.ps1*'}) {
+	write-ioc "Check for Scheduled Task running a PowerShell script"
+}
+# Too noisy
+#if ($st | Where-Object {$_.Actions -like '*.vbs*'}) {
+#	write-ioc "Check for Scheduled Task running a Visual Basic Script (.vbs)"
+#}
+if ($st | Where-Object {$_.Actions -like '*plink*'}) {
+	write-ioc "Check for Scheduled Task running plink"
+}
+$stnum = ($st | Where-Object {[datetime]::parse($_.CreationDate) -ge $imagedate}).length
+if ($stnum -gt 0) {
+	write-ioc "$stnum New Scheduled tasks in last 30 days."
+}
+write-log "$scriptname - Checking for WMI persistence." -fore "Yellow"
+if (Get-ChildItem ($Computername + '~wmi.txt') | Where-Object length -gt 1670) {
+	write-ioc "Check $Computername~wmi.txt"
+}
+
+######### Normalize Dates ###########
+
+if (test-path ($basedir + 'Srum')) {
+	push-location ($basedir + 'Srum')
+	Write-log "$scriptname - Normalizing SRUM tables" -fore "yellow"
+	normalize-date ($computername + '-NetworkUsage.csv') 'TimeStamp'
+	normalize-date ($computername + '-PushNotification.csv') 'TimeStamp'
+	normalize-date ($computername + '-NetworkConnection.csv') 'TimeStamp'
+	normalize-date ($computername + '-TimelineProvider.csv') 'TimeStamp'
+	normalize-date ($computername + '-AppResourceInfo.csv') 'TimeStamp'
+	normalize-date ($computername + '-EnergyUsage-LongTerm.csv') 'TimeStamp'
+	normalize-date ($computername + '-EnergyUsage.csv') 'TimeStamp'
+	normalize-date ($computername + '-Vfuprov.csv') 'TimeStamp'
+	pop-location
+}
+if (Test-Path ($computername + '~dnslogs.csv')) {
+	Normalize-Date ($computername + '~dnslogs.csv') 'TimeStamp'
+}
+Write-log "$scriptname - Normalizing System Data" -fore "yellow"
 Normalize-Date ($computername + '~AppCompatCache.csv')	'LastModifiedTimeUTC'
 Normalize-Date ($computername + '~AmCache.csv') 'KeyLastWriteTimestamp'
 Normalize-Date ($computername + '~AmCache_DevicePnps.csv') 'KeyLastWriteTimestamp,DriverVerDate'
@@ -776,4 +789,3 @@ Normalize-Date ($computername + '~LnkFiles.csv') 'TargetAccessed,SourceCreated,S
 
 write-log 'Finished getting Systeminfo'
 
-pop-location

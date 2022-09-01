@@ -9,8 +9,7 @@
 		V1.0
 #>
 #basic configuration 
-$ScriptDir = split-path -parent $MyInvocation.MyCommand.Path
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
+$Version = '2.0'
 
 #These configuration lines list the location the script will look for the auxiliarly programs - these can be changed
 #to reflect a custom configuration. The only caveat is the Eric Zimmeramn registry batch files *.reb are custom versions 
@@ -46,6 +45,15 @@ $nese = $ScriptDir + '\Nirsoft\esedatabaseview.exe'
 $debug = $false
 ##----------------
 
+function out-debug {
+	Param([Parameter(Mandatory=$false,ValueFromPipeline=$true)][string]$msg='nil')
+	if ($debug -and $msg -ne 'nil') {
+			$dte = Get-Date
+			write-host -ForegroundColor Yellow $msg
+			$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content ($basedir + 'debuglog.txt')
+	}
+}
+
 function update-systemstatuslog {
 	<#
 		.Synopsis
@@ -64,13 +72,16 @@ function update-systemstatuslog {
 	$DateTime + ' - ' + $msg | add-content $statusLog
 	out-debug ("Status: " + $msg)
 }
+
 function write-log {
-	param([Parameter(Mandatory=$True)][string]$msg,[Parameter(Mandatory=$false)][string]$fore="white")
-	$msglog = $basedir + '\ProgressLog.txt'
-	$dte = get-date
-	write-host $msg -fore $fore
-	$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content $msglog
-	out-debug ($dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg)
+	param([Parameter(Mandatory=$false)][string]$msg='nil',[Parameter(Mandatory=$false)][string]$fore="white")
+	if ($msg -ne 'nil' -and $msg -ne "") {
+		$msglog = $basedir + '\ProgressLog.txt'
+		$dte = get-date
+		write-host $msg -fore $fore
+		$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content $msglog
+		out-debug ($dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg)
+	}
 }
 
 function write-Hostlog {
@@ -111,18 +122,6 @@ function get-path {
 		write-host ("Path: " + $tmp)
 	}
 	return $tmp
-}
-
-function out-debug {
-	Param([Parameter(Mandatory=$true,ValueFromPipeline=$true)][string]$msg)
-	
-	if ($debug) {
-		if ($msg -ne ''){
-			$dte = Get-Date
-			write-host -ForegroundColor Yellow $msg
-			$dte.tostring("M-d-yyyy h:mm") + ' - ' + $msg | add-content ($basedir + 'debuglog.txt')
-		}
-	}
 }
 
 function write-ioc {
@@ -166,8 +165,6 @@ Param([Parameter(Mandatory=$True)][string]$csvfile,
 		$s = import-csv $csvfile
 		$s | add-member -NotePropertyName EntryID -NotePropertyValue 0
 		$s | ForEach-Object{$_.entryid=$n;$n+=1}
-		$eap = $erroractionpreference
-		$erroractionpreference = "SilentlyContinue"
 		if ($datefields.length -gt 0) {
 			$s | ForEach-object{foreach($datefield in ($dateFields -split ',')) {$_.$dateField = [datetime]::parse($_.$dateField).tostring('yyyy-MM-dd HH:mm:ss.fffffff')}}
 		}
@@ -185,7 +182,6 @@ Param([Parameter(Mandatory=$True)][string]$csvfile,
 		} else {
 			$fields = 'EntryID,' + $flds
 		}
-		$erroractionpreference = $eap
 		$s | select-object ($fields -split ',') | export-csv -notype $csvfile
 	}
 }

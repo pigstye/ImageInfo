@@ -29,7 +29,6 @@
 		4/28/21
 	Refactored 8/6/2021
 	Rebuilt 8/25/2021
-	V1.0
 #>
 Param([String][Parameter(Mandatory=$true)]$drive)
 
@@ -37,7 +36,11 @@ Param([String][Parameter(Mandatory=$true)]$drive)
   Configuration Information
 #>
 #basic configuration 
-. ($psscriptroot + '.\process-lib.ps1')
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
 
 function get-regvalue {
@@ -83,7 +86,8 @@ function get-computername {
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
+write-log "$ScriptName - V $Version"
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
@@ -118,8 +122,9 @@ if (-not (test-path $userDir)) {
 out-debug "Userdir = $userdir"
 mkdir 'userinfo' >> $null
 $userinfo = get-path 'userinfo'
-out-debug "Logdir = $logdir"
+out-debug "UserInfo = $userinfo"
 $logdir = get-path 'logs'
+out-debug "Logdir = $logdir"
 
 write-log "Copying Event Logs"
 $evtlogs = $windir + "system32\winevt\logs\"
@@ -194,8 +199,9 @@ set-location $basedir
 Write-Log 'Exporting MFT'
 $outfile = ($basedir + $computername + '~mft.csv')
 & $mft -f ($drive + ':\$MFT') --csv $basedir --csvf $outfile | out-debug
-Normalize-Date $outfile 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
+###### Checking for IOCs #######
+write-log "$scriptname - Checking for IOCs" -fore "Green"
 $mftinfo = import-csv ($computername + '~mft.csv') | Where-Object {[datetime]::parse($_.LastModified0x10) -gt $imagedate}
 $poc = $mftinfo | Where-Object {$_.ParentPath -eq '.\ProgramData' -and ($_.extension -eq 'exe' -or $_.extension -eq 'dll' -or $_.extension -eq 'ocx' -or $_.extension -eq 'cmd' -or $_.extension -eq 'bat' -or $_.extension -eq 'ps1')}
 if ($poc.length -gt 0) {
@@ -247,6 +253,10 @@ if ($mftinfo | where-object {$_.FileName -like '*Powertool*'}) {
 if ($mftinfo | where-object {$_.FileName -like '*net-gpppassword*'}) {
 	write-ioc "Check for Net-GPPPassword.exe"
 }
+
+########## Normalizing Dates #############
+write-log "$scriptname - Normalizing Dates" -fore "Green"
+Normalize-Date ($basedir + $computername + '~mft.csv') 'LastModified0x10,Created0x10,Created0x30,LastModified0x10,LastModified0x30,LastRecordChange0x10,LastRecordChange0x30,LastAccess0x10,LastAccess0x30' 
 
 get-childitem * | where-object { $_.length -eq 0} | remove-item
 

@@ -25,11 +25,13 @@
 <#
   Configuration Information
 #>
+#basic configuration 
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
-. ($psscriptroot + '.\process-lib.ps1')
-
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
 
 function get-eventlogs {
 <#
@@ -542,6 +544,9 @@ if (!$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adminis
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
+write-log "$ScriptName - V $Version"
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug

@@ -29,10 +29,12 @@
 <#
   Configuration Information
 #>
-
-. ($psscriptroot + '.\process-lib.ps1')
-$ScriptName = [system.io.path]::GetFilenameWithoutExtension($ScriptPath)
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+#basic configuration 
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
 
 function import-iislogs {
 <#
@@ -74,6 +76,9 @@ function import-iislogs {
 # And it begins
 #########
 $ErrorActionPreference = "SilentlyContinue"
+write-log "$ScriptName - V $Version"
+$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+
 #Trap code to write Error Messages to the debug.log and display on screen if enabled with the $debug variable
 trap {
 	"###+++###" | out-debug
@@ -82,9 +87,8 @@ trap {
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
 
-$drive = $inetpub[0]
 if (test-path ($drive + ":\Windows\system32\inetsrv\config\applicationHost.config")) {
-	[xml]$iisconfig = gc ($drive + ":\windows\system32\inetsrv\config\applicationHost.config")
+	[xml]$iisconfig = Get-Content ($drive + ":\windows\system32\inetsrv\config\applicationHost.config")
 	$iislogdir = $iisconfig.configuration.'system.applicationhost'.log.centralbinarylogfile.directory
 	$iislogdir = $iislogdir -replace '\%SystemDrive\%',($drive + ':')
 } else {
@@ -131,7 +135,7 @@ if (test-path ($iislogdir)) {
 	} else {
 		$iislogs = get-path 'iislogs'
 	}
-	get-childitem $iislogdir | %{copy-item -recurse $_.fullname $iislogs}
+	get-childitem $iislogdir | ForEach-Object{copy-item -recurse $_.fullname $iislogs}
 	mkdir ($iislogs + 'HTTPERR')
 	copy-item -Recurse ($httperr + 'httperr\*') ($iislogs + 'HTTPERR')
 #######
@@ -150,8 +154,8 @@ if (test-path ($iislogdir)) {
 		set-location $iiscsv
 		get-childitem ..\*.log -recurse | foreach-object{Import-IISLogs $_.fullname}
 		set-location $iislogs
-		$logscsv = dir $iiscsv
-		$fields = gc $logscsv[1].fullname -head 1
+		$logscsv = Get-ChildItem $iiscsv
+		$fields = Get-Content $logscsv[1].fullname -head 1
 		$fields = $fields -replace '"time",',''
 		$outcsv = $iislogs + $_.name + '.csv'
 		write-log "Gathering all the CSV for $_ into $outcsv"
@@ -160,9 +164,10 @@ if (test-path ($iislogdir)) {
 			$tmpcsv | foreach-object{$_.date = $_.date + ' ' + $_.time}
 			$tmpcsv | select-object ($fields -split ',') | export-csv -notype -append $outcsv
 		}
+		########## Looking for IOCs ##############
 		$sqli = @()
-		Write-log "Looking at $_ for possible SQLi"
-		write-debug "Looking for possible SQLI in $_ ALTER, CREATE, DELETE, DROP, EXEC(UTE), INSERT( +INTO), MERGE, SELECT, UPDATE, UNION( +ALL)"
+		Write-log "$scriptname - Looking at $_ for possible SQLi"
+		out-debug "$scriptname - Looking for possible SQLI in $_ ALTER, CREATE, DELETE, DROP, EXEC(UTE), INSERT( +INTO), MERGE, SELECT, UPDATE, UNION( +ALL)"
 		import-csv $outcsv | ForEach-Object{if($_.'cs-uri-stem' | Select-String '(ALTER|CREATE|DELETE|DROP|EXEC(UTE){0,1}|INSERT( +INTO){0,1}|MERGE|SELECT|UPDATE|UNION( +ALL){0,1})') { $sqli += $_.'cs-uri-stem'}}
 		if ($sqli) {
 			write-ioc "Looking at $_ IIS Logs for SQLi"
