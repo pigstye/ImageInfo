@@ -271,9 +271,9 @@ compress-archive -Path ('.\UserInfo\' + $computername + '*.csv') -DestinationPat
 
 set-location ..
 
-write-log "Finished Main Processing"
+write-log "$scriptname - Finished Main Processing" -fore green
 write-host "When the logs are finished, processing will be complete for $computername" -fore yellow
-Write-host "You can dismount the image and start looking at the other things now." -fore green
+Write-host "You can dismount the image and start looking at the other things now." -fore yellow
 
 function Haiku {
 	$num = get-random(3,2,1)
@@ -291,3 +291,5 @@ function Haiku {
 	}
 }
 Haiku
+
+write-host "Check _ThingsToCheck.txt for some obvious things" -fore green

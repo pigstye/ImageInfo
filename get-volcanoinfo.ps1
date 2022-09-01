@@ -262,3 +262,5 @@ function Haiku {
 	}
 }
 Haiku
+
+write-host "Check _ThingsToCheck.txt for some obvious things" -fore green

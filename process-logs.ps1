@@ -395,7 +395,7 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		($PSItem.InvocationInfo).positionmessage | out-debug
 	}
 
-	out-debug "$scriptname - Looking for Common Vulnerabilites"
+	write-log "$scriptname - Looking for Common Vulnerabilites" -Fore "Green"
 	$app = import-csv ($csvdir + $computername + '~Application.csv') | Where-Object {$_.eventid -eq 1309 -and $_.event -like '*type=rau*'}
 	if ($app) {
 		write-ioc "Possible Telerik Vulnerability - Application Log, EventID 1309, 'Type=rau'"
