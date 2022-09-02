@@ -141,25 +141,26 @@ $host.ui.RawUI.WindowTitle="Processing Volcano output for $computername"
 $script = $scriptdir + '\process-logs.ps1'
 
 out-debug "Setting ImageDate"
-[datetime]::parse((get-date)).tostring('yyyy-MM-dd HH:mm:ss') | set-content ($basedir + 'ImageDate.txt')
 $s = (get-childitem $logdir).lastwritetime
-($s | sort-object)[$s.length-1] | set-content ($basedir + 'ImageDate.txt')
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+$dte = ($s | sort-object)[$s.length-1]
+$dte  | set-content ($basedir + 'ImageDate.txt')
+$imagedate = [datetime]::parse($dte).adddays(-30)
+write-log "Imagedate = $dte"
 
 $arg = "-noprofile -command $script '$computername' '$basedir' '$logdir'"
 start-process "$pshome\powershell.exe" -argumentlist $arg
-out-debug "$scriptname - Executing command: powershell.exe $arg"
+out-debug "$scriptname -Executing command: powershell.exe $arg"
 write-log "Starting Log Analysis"
 
 $script = $scriptdir + '\process-registries.ps1'
 $config = $basedir + 'c\windows\System32\config\'
 $userdir = $basedir + 'c\users'
-out-debug "$scriptname - Executing command: $script $computername $basedir $config $userdir $userinfo"
+out-debug "$scriptname -Executing command: $script $computername $basedir $config $userdir $userinfo"
 & $script $computername $basedir $config $userdir $userinfo
 
 $windir = $basdir + 'c\windows\'
 $script = $scriptdir + '\process-systeminfo.ps1'
-out-debug "$scriptname - Executing command: $script $computername $basedir $windir $userdir"
+out-debug "$scriptname -Executing command: $script $computername $basedir $windir $userdir"
 & $script $computername $basedir $windir $userdir
 
 $script = $scriptdir + '\process-userinfo.ps1'

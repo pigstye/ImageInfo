@@ -87,6 +87,7 @@ trap {
 	($PSItem.InvocationInfo).positionmessage | out-debug
 }
 
+$drive = $inetpub[0]
 if (test-path ($drive + ":\Windows\system32\inetsrv\config\applicationHost.config")) {
 	[xml]$iisconfig = Get-Content ($drive + ":\windows\system32\inetsrv\config\applicationHost.config")
 	$iislogdir = $iisconfig.configuration.'system.applicationhost'.log.centralbinarylogfile.directory

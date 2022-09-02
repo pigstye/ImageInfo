@@ -807,7 +807,7 @@ out-debug "$scriptname - Processing AuditInfo with audit.reb"
 get-regbatch -title 'AuditInfo' -computer $computername -batch 'audit.reb' -path $systemdir -out '~Audit.csv'
 out-debug "$scriptname - Processing Services with services.reb"
 get-regbatch -title 'Services' -computer $computername -batch 'services.reb' -path $systemdir -out '~services.csv'
-out-debug "$scriptname - Processing unquoted service paths"
+out-debug "$scriptname - Looking for unquoted service paths"
 get-unquotedservicepaths(($computername + '~services.csv')) | export-csv -notype ($computername + '~unquotedservicepaths.csv')
 
 out-debug "$scriptname - Processing 'Installed User Software' with installedsoftware.reb"
@@ -878,7 +878,7 @@ if ($sbs) {
 
 write-log "$scriptname - Checking for common IOCs in Registries" -fore "Yellow"
 write-log "$scriptname - Checking for common IOCs in UserAssist" -fore "Yellow"
-$usa = import-csv ($computername + '~UserActivity_UserAssist.csv')
+$usa = import-csv ($userinfo + $computername + '~UserActivity_UserAssist.csv')
 if ($usa | Where-Object {$_.ProgramName -like ('*mi"+ "mik" + "atz*')}) {
 	write-ioc "Check for mi" + "mik" + "atz usage"
 }

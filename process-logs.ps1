@@ -415,7 +415,31 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 		write-ioc "$stnum User or Group changes in last 30 days"
 	}
 	if ($system | where-object {$_.eventid -eq 4688 -and [datetime]::parse($_.datetime) -ge $imagedate -and ($_.event -like '*cmd.exe*' -or $_.event -like '*powershell.exe*' -or $_.event -like '*cipher.exe*' -or $_.event -like '*WMIC.EXE*' -or $_.event -like '*NET.EXE*' -or $_.event -like '*REGSVR32.EXE*' -or $_.event -like '*MSHTA.EXE*' -or $_.event -like '*msbuild.exe*' -or $_.event -like '*wmic.exe*' -or $_.event -like '*cscript.exe*')}) {
-		write-ioc "$stnum lolbins used in last 30 days"
+		write-ioc "Check for lolbin usage in last 30 days"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*cmd.exe /c chcp*'}) {
+		write-ioc "Code page was checked"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*wmic /Node:localhost /Namespace*'}) {
+		write-ioc "Check for wmic activity"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*ipconfig /all*'}) {
+		write-ioc "ipconfig was run"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*systeminfo*'}) {
+		write-ioc "systeminfo was run"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*net config workstation*'}) {
+		write-ioc "Check for net config usage"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*nltest /domain*'}) {
+		write-ioc "nltest was run"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*net view*'}) {
+		write-ioc "net view was used"
+	}
+	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*net group*'}) {
+		write-ioc "net group was used"
 	}
 	if ((get-content ($basedir + 'logsearches\NonLocalIPAddresses.txt')).Length -gt 2) {
 		write-ioc "Check NonLocalIPAddresses.txt in the LogSearches directory."
@@ -557,7 +581,6 @@ trap {
 
 if ($debug) {
 	out-debug "process-logs.ps1"
-	out-debug "Parameters:"
 	out-debug "Computername = $Computername"
 	out-debug "Basedir = $basedir"
 	out-debug "Logfiles = $logfiles"
@@ -586,7 +609,7 @@ push-location $basedir
 mkdir logs-csv >> $null
 mkdir logsearches >> $null
 $logcsv = $computername + '-logs.csv'
-get-childitem -path $logfiles -filter '*.evt*' | foreach-object{write-log "Processing: $_"
+get-childitem -path $logfiles -filter '*.evt*' | foreach-object{write-log "Converting to csv: $_"
 		trap {
 			"###+++###" | out-debug
 			$scriptname | out-debug
@@ -599,7 +622,7 @@ get-childitem -path $logfiles -filter '*.evt*' | foreach-object{write-log "Proce
 		$tmp | export-csv -notype $logcsv -append
 		$tmp | export-csv -notype ('logs-csv\' + $computername + '~' + $_.basename + '.csv')
 }
-#get-childitem $logfiles | where-object {$_.length -gt 69632} | foreach-object{write-log "Processing: $_"; $tmp = get-eventlogs $_.fullname; $tmp | foreach-object{$_.datetime = [datetime]::parse($_.datetime).tostring('yyyy-MM-dd HH:mm:ss')} -ErrorAction SilentlyContinue;  $tmp | export-csv -notype $logcsv -append; $tmp | export-csv -notype ('logs-csv\' + $computername + '~' + $_.basename + '.csv')}
+
 get-childitem .\logs-csv\ | where-object {$_.length -eq 0} | remove-item
 
 write-log "Performing log searches for common vulnerabilities"

@@ -166,7 +166,13 @@ Param([Parameter(Mandatory=$True)][string]$csvfile,
 		$s | add-member -NotePropertyName EntryID -NotePropertyValue 0
 		$s | ForEach-Object{$_.entryid=$n;$n+=1}
 		if ($datefields.length -gt 0) {
-			$s | ForEach-object{foreach($datefield in ($dateFields -split ',')) {$_.$dateField = [datetime]::parse($_.$dateField).tostring('yyyy-MM-dd HH:mm:ss.fffffff')}}
+			$s | ForEach-object{
+				foreach($datefield in ($dateFields -split ',')) {
+					if ($_.datefield -as [datetime]) {
+					$_.$dateField = [datetime]::parse($_.$dateField).tostring('yyyy-MM-dd HH:mm:ss.fffffff')
+					}
+				}
+			}
 		}
 		$flds = get-content $csvfile -head 1
 		$flds = $flds -replace '"',''

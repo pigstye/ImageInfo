@@ -150,6 +150,13 @@ foreach ($user in $users) {
 		& $wtxcmd -f $profile1 --csv $d
 	}
 
+	$PowerShellLog = '\AppData\roaming\Microsoft\Windows\PowerShell\psreadline\consolehost_history.txt'
+	if (test-path ($userdir + $user + $PowerShellLog)) {
+		write-log "Getting $user PowerShell Log"
+		$outfile = $computername + '~' + $user + '_PowerShellLog.txt'
+		copy-item ($userdir + $user + $PowerShellLog) $outfile
+	}
+
 }
 
 ####### Check for IOCs ########

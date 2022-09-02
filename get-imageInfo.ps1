@@ -136,8 +136,10 @@ if (test-path $evtlogs) {
 copy-item $evtlogs $logdir
 
 $s = (get-childitem $logdir).lastwritetime
-($s | sort-object)[$s.length-1] | add-content ($basedir + 'ImageDate.txt')
-$imagedate = [datetime]::parse((get-content ($basedir + 'ImageDate.txt'))).adddays(-30)
+$dte = ($s | sort-object)[$s.length-1]
+$dte  | set-content ($basedir + 'ImageDate.txt')
+$imagedate = [datetime]::parse($dte).adddays(-30)
+write-log "Imagedate = $dte"
 
 $script = $scriptdir + '\process-logs.ps1'
 if ($debug) {
@@ -146,7 +148,7 @@ if ($debug) {
 	$arg = ''
 }
 $arg += "-noprofile -command $script '$computername' '$basedir' '$logdir'"
-out-debug $arg
+out-debug "$scriptname - Executing Command: $pshome\powershell.exe $arg"
 start-process "$pshome\powershell.exe" -argumentlist $arg
 write-log "Starting Log Analysis"
 
@@ -162,19 +164,19 @@ if (test-path ($drive + ':\inetpub')) {
 		$arg = ''
 	}
 	$arg += "-noprofile -command $script '$computername' '$basedir' '$inetpub' '$httperr' '$iisLogDir'"
-	out-debug $arg
+	out-debug "$scriptname - Executing Command: $pshome\powershell.exe $arg"
 	start-process "$pshome\powershell.exe" -argumentlist $arg
 	write-log "Starting IIS Log Analysis"
 }
 
 $script = $scriptdir + '\process-registries.ps1'
 $config = $windir + 'System32\config\'
-out-debug "$script $computername $basedir $config $userdir $userinfo"
+out-debug "$scriptname - $script $computername $basedir $config $userdir $userinfo"
 & $script $computername $basedir $config $userdir $userinfo
 
 
 $script = $scriptdir + '\process-systeminfo.ps1'
-out-debug "$script $computername $basedir $windir $userdir"
+out-debug "$scriptname - Executing Command: $script $computername $basedir $windir $userdir"
 & $script $computername $basedir $windir $userdir
 
 $users = @()
@@ -192,7 +194,7 @@ foreach($user in $users) {
 set-location ..
 
 $script = $scriptdir + '\process-userinfo.ps1'
-out-debug "$script $computername $basedir $userdir $userinfo"
+out-debug "$scriptname - Executing Command: $script $computername $basedir $userdir $userinfo"
 & $script $computername $basedir $userdir $userinfo
 
 set-location $basedir
