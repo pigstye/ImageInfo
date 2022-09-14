@@ -441,8 +441,8 @@ Param([Parameter(Mandatory=$True)][string]$Computername,
 	if ($system | where-object {$_.eventid -eq 4688 -and $_.event -like '*net group*'}) {
 		write-ioc "net group was used"
 	}
-	if ((get-content ($basedir + 'logsearches\NonLocalIPAddresses.txt')).Length -gt 2) {
-		write-ioc "Check NonLocalIPAddresses.txt in the LogSearches directory."
+	if ((get-content ($basedir + 'NonLocalIPAddresses.txt')).Length -gt 2) {
+		write-ioc "Check NonLocalIPAddresses.txt."
 	}
 	$defender = import-csv ($csvdir + ($computername + '~Microsoft-Windows-Windows Defender%4Operational.csv'))
 	if ($defender | Where-Object {$_.event -like '*CobaltStrike*'}) {
