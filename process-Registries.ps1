@@ -891,6 +891,24 @@ if ($usa | Where-Object {$_.ProgramName -like ('*gme' + 'r*.exe*')}) {
 if ($usa | Where-Object {$_.ProgramName -like ('*anx' + 'insec*.exe*')}) {
 	write-ioc "Check for *anxinsec.exe activity"
 }
+if ($usa | where-object {$_.ProgramName -like '*cmd.exe*' -or  $_.ProgramName -like '*cipher.exe*' -or $_.ProgramName -like '*WMIC.EXE*' -or $_.ProgramName -like '*NET.EXE*' -or $_.ProgramName -like '*REGSVR32.EXE*' -or $_.ProgramName -like '*MSHTA.EXE*' -or $_.ProgramName -like '*msbuild.exe*' -or $_.ProgramName -like '*cscript.exe*'}) {
+	write-ioc "Check for lolbin usage"
+}
+if ($usa | where-object {$_.ProgramName -like '*cmd.exe /c chcp*'}) {
+	write-ioc "Code page was checked"
+}
+if ($usa | where-object {$_.ProgramName -like '*wmic*'}) {
+	write-ioc "Check for wmic activity"
+}
+if ($usa | where-object {$_.ProgramName -like '*ipconfig*'}) {
+	write-ioc "ipconfig was run"
+}
+if ($usa | where-object {$_.ProgramName -like '*systeminfo*'}) {
+	write-ioc "systeminfo was run"
+}
+if ($usa | where-object {$_.ProgramName -like '*nltest*'}) {
+	write-ioc "nltest was run"
+}
 write-log "$scriptname - Checking for common IOCs in System Registry" -fore "Yellow"
 $sinfo = import-csv ($basedir + $computername + '~SystemInfo.csv')
 if ($sinfo | Where-Object {$_.keypath -like '*Image File Execution Options*' -and $_.ValueName -eq 'Debugger'}) {
