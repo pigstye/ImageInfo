@@ -326,6 +326,7 @@ if (test-path ($windir + 'system32\sru\srudb.dat')) {
 	write-log "Did not find SRUM data"
 }
 
+set-location $basedir
 $polfile = $scriptdir + '\parse-polfile.ps1'
 . $polfile
 write-log "Local Group Policy saved to $computername~LocalGroupPolicy.txt"
