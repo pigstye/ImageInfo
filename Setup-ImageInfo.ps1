@@ -12,6 +12,12 @@
     Date:   8/12/2022    
 #>
 
+$Version = '2.0'
+$ScriptName = $MyInvocation.MyCommand.name
+$ScriptPath = $MyInvocation.MyCommand.path
+$ScriptDir = split-path -parent $ScriptPath
+. ($ScriptDir + '\process-lib.ps1')
+
 #load locations of tools incase they have been changed
 . .\Process-lib.ps1
 
